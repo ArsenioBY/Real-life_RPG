@@ -820,8 +820,17 @@ function loadLocal(){
 async function sendMagicLink(){
   const email=document.getElementById('auth-email').value.trim();
   if(!email||!email.includes('@')){toast('Введи корректный email');return;}
-  const{error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.href}});
-  if(error){toast('Ошибка: '+error.message);return;}
+  const btn=document.querySelector('.auth-btn');
+  btn.disabled=true;btn.textContent='Отправляем...';
+  const{error}=await sb.auth.signInWithOtp({
+    email,
+    options:{emailRedirectTo:window.location.href}
+  });
+  if(error){
+    toast('Ошибка: '+error.message);
+    btn.disabled=false;btn.textContent='Войти →';
+    return;
+  }
   document.getElementById('auth-form-wrap').style.display='none';
   document.getElementById('auth-sent').style.display='block';
 }
