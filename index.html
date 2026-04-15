@@ -1,0 +1,1814 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Arseny RPG">
+<meta name="theme-color" content="#7F77DD">
+<title>Arseny RPG</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+
+<!-- Supabase SDK via CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+/* ── DESIGN TOKENS ─────────────────────────────────────── */
+:root{
+  --bg:#ffffff;--bg2:#f5f5f7;--bg3:#e8e8ed;
+  --text:#1d1d1f;--text2:#6e6e73;--text3:#aeaeb2;
+  --border:rgba(0,0,0,0.10);--border2:rgba(0,0,0,0.18);
+  --purple:#7F77DD;--pdark:#534AB7;--plight:#EEEDFE;--ptext:#3C3489;
+  --green:#1D9E75;--glight:#EAF3DE;--gtext:#3B6D11;
+  --blue:#378ADD;--blight:#E6F1FB;--btext:#185FA5;
+  --amber:#BA7517;--alight:#FAEEDA;--atext:#633806;
+  --red:#E24B4A;--rlight:#FCEBEB;--rtext:#A32D2D;
+  --pink:#D4537E;
+  --r:12px;--rsm:8px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1c1c1e;--bg2:#2c2c2e;--bg3:#3a3a3c;
+  --text:#f5f5f7;--text2:#aeaeb2;--text3:#6e6e73;
+  --border:rgba(255,255,255,0.10);--border2:rgba(255,255,255,0.20);
+  --plight:#26215C;--ptext:#c5bfff;
+  --glight:#1a2e1a;--gtext:#6ec97a;
+  --blight:#1a2535;--btext:#6ab0f5;
+  --alight:#2e2010;--atext:#f5c060;
+  --rlight:#2e1515;--rtext:#f58080;
+}}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;background:var(--bg);color:var(--text);min-height:100%;max-width:430px;margin:0 auto;padding-top:var(--safe-top)}
+.app{padding:14px 14px calc(80px + var(--safe-bot))}
+button{cursor:pointer;font-family:inherit}
+
+/* ── AUTH SCREEN ───────────────────────────────────────── */
+.auth-screen{position:fixed;inset:0;background:var(--bg);z-index:900;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center}
+.auth-logo{font-size:64px;margin-bottom:16px}
+.auth-title{font-size:28px;font-weight:800;color:var(--text);margin-bottom:8px}
+.auth-sub{font-size:15px;color:var(--text2);line-height:1.6;margin-bottom:32px}
+.auth-input{width:100%;max-width:320px;font-size:15px;padding:14px 16px;border-radius:var(--r);background:var(--bg2);border:0.5px solid var(--border2);color:var(--text);outline:none;-webkit-appearance:none;text-align:center;margin-bottom:12px}
+.auth-input:focus{border-color:var(--purple)}
+.auth-btn{width:100%;max-width:320px;padding:15px;background:var(--purple);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:700;margin-bottom:8px}
+.auth-hint{font-size:12px;color:var(--text3);margin-top:8px;line-height:1.5}
+.auth-magic-sent{background:var(--glight);border:1px solid var(--green);border-radius:var(--r);padding:16px;max-width:320px;width:100%;text-align:center}
+.auth-magic-sent .emoji{font-size:32px;margin-bottom:8px}
+.auth-magic-sent p{font-size:14px;color:var(--gtext);line-height:1.5}
+
+/* ── LOADING ───────────────────────────────────────────── */
+.loading-screen{position:fixed;inset:0;background:var(--bg);z-index:800;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.loading-spinner{width:32px;height:32px;border:3px solid var(--bg3);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite}
+.loading-text{font-size:13px;color:var(--text2)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── ONBOARDING ─────────────────────────────────────────── */
+.onboard{position:fixed;inset:0;background:var(--bg);z-index:700;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center}
+.onboard-step{display:none}.onboard-step.active{display:flex;flex-direction:column;align-items:center;width:100%;max-width:320px}
+.onboard-emoji{font-size:64px;margin-bottom:20px}
+.onboard-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:10px}
+.onboard-sub{font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:24px}
+.onboard-dots{display:flex;gap:6px;margin-bottom:24px}
+.onboard-dot{width:6px;height:6px;border-radius:50%;background:var(--bg3)}.onboard-dot.active{background:var(--purple)}
+.onboard-btn{width:100%;padding:15px;background:var(--purple);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:700;margin-bottom:8px}
+.onboard-skip{font-size:13px;color:var(--text3);padding:8px;border:none;background:none}
+.onboard-inp{width:100%;font-size:15px;padding:12px 14px;border-radius:var(--rsm);background:var(--bg2);border:0.5px solid var(--border2);color:var(--text);outline:none;margin-bottom:12px;text-align:center}
+.emoji-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:16px}
+.emoji-opt{font-size:28px;padding:8px;border-radius:var(--rsm);border:2px solid transparent;background:var(--bg2);cursor:pointer}
+.emoji-opt.sel{border-color:var(--purple);background:var(--plight)}
+
+/* ── TOP BAR ───────────────────────────────────────────── */
+.top-bar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
+.char-name{font-size:20px;font-weight:700;color:var(--text);line-height:1.1}
+.top-date{font-size:11px;color:var(--text2);margin-top:2px}
+.top-right{display:flex;align-items:center;gap:8px}
+.lvl-badge{font-size:11px;font-weight:600;padding:4px 11px;border-radius:20px;background:var(--plight);color:var(--ptext);white-space:nowrap}
+.profile-switch{font-size:18px;padding:2px;border:none;background:none;cursor:pointer;opacity:.7}
+
+/* ── XP BAR ────────────────────────────────────────────── */
+.xp-row{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:4px}
+.xp-track{height:7px;background:var(--bg2);border-radius:8px;overflow:hidden;border:0.5px solid var(--border);margin-bottom:10px}
+.xp-fill{height:100%;background:linear-gradient(90deg,var(--purple),var(--pdark));border-radius:8px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+
+/* ── STREAK ────────────────────────────────────────────── */
+.streak-row{display:flex;align-items:center;gap:6px;margin-bottom:10px;background:var(--bg2);border-radius:var(--r);padding:9px 12px;border:0.5px solid var(--border)}
+.streak-fire{font-size:18px}
+.streak-info{flex:1}
+.streak-val{font-size:15px;font-weight:700;color:var(--text)}
+.streak-lbl{font-size:10px;color:var(--text2)}
+.streak-dots{display:flex;gap:4px}
+.sd{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text3);font-weight:500}
+.sd.done{background:var(--purple);border-color:var(--purple);color:#fff}
+.sd.today{border-color:var(--purple);color:var(--ptext);font-weight:700}
+
+/* ── GEL BALANCE ───────────────────────────────────────── */
+.gel-balance-row{display:flex;gap:6px;margin-bottom:10px}
+.gel-card{flex:1;background:var(--bg2);border-radius:var(--r);padding:9px 11px;border:0.5px solid var(--border)}
+.gel-card.main{background:var(--plight);border-color:rgba(127,119,221,.3)}
+.gel-lbl{font-size:9px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+.gel-card.main .gel-lbl{color:var(--ptext)}
+.gel-val{font-size:18px;font-weight:800;color:var(--text)}
+.gel-card.main .gel-val{color:var(--pdark)}
+.gel-sub{font-size:9px;color:var(--text3);margin-top:1px}
+
+/* ── GOALS STRIP ───────────────────────────────────────── */
+.goals-strip{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.goal-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r);padding:9px 11px}
+.goal-lbl{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;font-weight:500}
+.goal-val{font-size:14px;font-weight:700;color:var(--text)}
+.goal-sub{font-size:9px;color:var(--text2);margin-top:1px}
+.goal-bar-bg{height:3px;background:var(--bg3);border-radius:3px;margin-top:5px;overflow:hidden}
+.goal-bar-fill{height:100%;border-radius:3px;transition:width .6s ease}
+
+/* ── TABS ───────────────────────────────────────────────── */
+.save-bar{text-align:center;font-size:10px;color:var(--gtext);padding:2px 0 6px;opacity:0;transition:opacity .3s}
+.save-bar.show{opacity:1}
+.tab-bar{display:flex;gap:2px;background:var(--bg2);border-radius:var(--rsm);padding:3px;margin-bottom:12px;position:sticky;top:0;z-index:20;border:0.5px solid var(--border)}
+.tab{flex:1;text-align:center;padding:7px 2px;font-size:10px;border-radius:6px;cursor:pointer;color:var(--text2);font-weight:500;transition:all .15s;border:none;background:transparent;font-family:inherit}
+.tab.active{background:var(--bg);color:var(--text);border:0.5px solid var(--border);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.panel{display:none}.panel.active{display:block}
+
+/* ── TODAY PANEL ───────────────────────────────────────── */
+.day-header-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.day-earned{font-size:12px;font-weight:600;color:var(--gtext)}
+.day-total{font-size:10px;color:var(--text2)}
+.day-bonus-banner{padding:9px 12px;background:var(--plight);border-radius:var(--rsm);margin-bottom:8px;border:0.5px solid rgba(127,119,221,.3);font-size:12px;color:var(--ptext);font-weight:500;display:none}
+.sec-hdr{display:flex;align-items:center;gap:7px;margin-bottom:7px;margin-top:4px}
+.sec-ico{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center}
+.sec-ico.work{background:var(--blight)}.sec-ico.personal{background:var(--glight)}.sec-ico.base{background:var(--plight)}
+.sec-lbl{font-size:12px;font-weight:700;color:var(--text)}
+.sec-cnt{font-size:10px;color:var(--text2)}
+.sec-gel{font-size:10px;color:var(--gtext);font-weight:600;margin-left:auto}
+.divider{height:0.5px;background:var(--border);margin:10px 0}
+
+/* ── TASK ITEM ──────────────────────────────────────────── */
+.qi{display:flex;align-items:flex-start;gap:8px;padding:10px 11px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r);margin-bottom:5px;transition:opacity .2s}
+.qi.work-t{border-left:3px solid var(--blue)}.qi.personal-t{border-left:3px solid var(--green)}.qi.base-t{border-left:3px solid var(--purple)}
+.qi.done-item{opacity:.5}
+.chk{width:20px;height:20px;border-radius:50%;border:2px solid var(--border2);flex-shrink:0;cursor:pointer;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.chk.done{background:var(--purple);border-color:var(--purple)}
+.chk.done::after{content:'✓';font-size:11px;color:#fff;font-weight:700}
+.qi-info{flex:1;min-width:0}
+.qi-name{font-size:13px;color:var(--text);font-weight:500;line-height:1.35}
+.qi-name.done{text-decoration:line-through;color:var(--text3)}
+.qi-time{font-size:10px;color:var(--ptext);font-weight:600;margin-top:2px}
+.qi-meta{font-size:10px;color:var(--text2);margin-top:2px}
+.qi-gel{font-size:10px;color:var(--gtext);font-weight:600;margin-top:2px}
+.qi-acts{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap}
+.qa{font-size:9px;padding:3px 8px;border-radius:10px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text2);font-family:inherit;transition:all .15s}
+.qa.r{color:var(--rtext)}.qa.b{color:var(--btext)}.qa.g{color:var(--gtext)}.qa.p{color:var(--ptext)}
+.pb{font-size:9px;padding:2px 6px;border-radius:10px;font-weight:600;flex-shrink:0;margin-top:1px}
+.p1{background:var(--rlight);color:var(--rtext)}.p2{background:var(--alight);color:var(--atext)}.p3{background:var(--plight);color:var(--ptext)}.p4{background:var(--glight);color:var(--gtext)}
+
+/* ── ADD/EDIT TASK ──────────────────────────────────────── */
+.add-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:8px}
+.add-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:9px}
+input,select,textarea{width:100%;font-size:13px;padding:9px 11px;border-radius:var(--rsm);background:var(--bg2);border:0.5px solid var(--border);color:var(--text);margin-bottom:6px;font-family:inherit;outline:none;-webkit-appearance:none;appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--purple);background:var(--bg)}
+.row{display:flex;gap:6px;align-items:flex-start}
+.row input,.row select{margin-bottom:0}
+.btn{width:100%;padding:11px;background:var(--purple);color:#fff;border:none;border-radius:var(--rsm);font-size:13px;font-weight:700;font-family:inherit;letter-spacing:.01em}
+.btn.danger{background:var(--red)}.btn.secondary{background:var(--bg2);color:var(--text);border:0.5px solid var(--border)}
+.btn.sm{padding:7px 12px;font-size:11px;width:auto}
+
+/* ── CHECK-IN ───────────────────────────────────────────── */
+.checkin-card{background:var(--bg);border:1.5px solid var(--purple);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.checkin-title{font-size:13px;font-weight:700;color:var(--ptext);margin-bottom:10px}
+.mood-row{display:flex;gap:6px;margin-bottom:10px}
+.mood-btn{flex:1;padding:10px;border:1.5px solid var(--border);border-radius:var(--rsm);background:var(--bg2);cursor:pointer;text-align:center;font-size:18px;transition:all .15s}
+.mood-btn.sel{border-color:var(--purple);background:var(--plight)}
+.note-inp{width:100%;font-size:13px;padding:9px 11px;border-radius:var(--rsm);background:var(--bg2);border:0.5px solid var(--border);color:var(--text);font-family:inherit;outline:none;resize:none;min-height:60px}
+.note-inp:focus{border-color:var(--purple)}
+.tomorrow-lbl{font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+
+/* ── WEEK / QUARTER ─────────────────────────────────────── */
+.sec-sub{font-size:10px;font-weight:700;margin:6px 0 4px;letter-spacing:.02em}
+.sec-sub.work{color:var(--btext)}.sec-sub.personal{color:var(--gtext)}
+.day-hdr{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:700;color:var(--text);margin:10px 0 5px;padding-bottom:5px;border-bottom:0.5px solid var(--border)}
+.day-gel-lbl{font-size:10px;color:var(--gtext);font-weight:600}
+.q-period{font-size:13px;font-weight:700;color:var(--text)}
+.q-chip{font-size:10px;padding:3px 9px;border-radius:20px;background:var(--bg2);color:var(--text2);font-weight:500}
+.q-bonus-banner{background:var(--glight);border:0.5px solid rgba(29,158,117,.3);border-radius:var(--rsm);padding:9px 11px;margin-bottom:7px}
+.q-bonus-t{font-size:11px;font-weight:700;color:var(--gtext);margin-bottom:1px}
+.q-bonus-d{font-size:10px;color:var(--gtext)}
+
+/* ── STATS ──────────────────────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px}
+.stat-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r);padding:9px}
+.s-ico{font-size:11px;font-weight:800;color:var(--text2);margin-bottom:1px;letter-spacing:.05em}
+.s-lbl{font-size:8px;color:var(--text2);margin-bottom:2px}
+.s-val{font-size:18px;font-weight:700;color:var(--text)}
+.s-bar-bg{height:3px;background:var(--bg3);border-radius:3px;margin-top:4px;overflow:hidden}
+.wlb-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.wlb-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r);padding:9px}
+.wlb-title{font-size:10px;color:var(--text2);margin-bottom:2px}.wlb-val{font-size:14px;font-weight:700;color:var(--text)}
+.wlb-bar-bg{height:3px;background:var(--bg3);border-radius:3px;margin-top:4px;overflow:hidden}
+
+/* ── LOG ITEMS ──────────────────────────────────────────── */
+.log-item{font-size:10px;color:var(--text2);padding:6px 9px;background:var(--bg2);border-radius:var(--rsm);margin-bottom:3px;display:flex;justify-content:space-between;gap:6px}
+.log-pos{color:var(--ptext);font-weight:600}
+.log-neg{color:var(--rtext);font-weight:600}
+
+/* ── REWARDS ─────────────────────────────────────────────  */
+.reward-card{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 12px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r);margin-bottom:6px;position:relative}
+.reward-card.unlocked{border-color:var(--green);background:var(--glight)}
+.rc-name{font-size:12px;font-weight:600;color:var(--text)}
+.rc-sub{font-size:10px;color:var(--text2);margin-top:1px}
+.rc-btn{font-size:11px;padding:6px 12px;background:var(--purple);color:#fff;border:none;border-radius:20px;font-weight:600;white-space:nowrap;flex-shrink:0;font-family:inherit}
+.rc-btn:disabled{background:var(--bg3);color:var(--text3)}
+.rc-btn.ready{background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+.rc-edit{font-size:10px;padding:3px 7px;border-radius:8px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text2);font-family:inherit;margin-right:4px}
+
+/* ── ARCHIVE ────────────────────────────────────────────── */
+.arch-item{padding:9px 11px;background:var(--bg2);border-radius:var(--rsm);margin-bottom:5px}
+.arch-name{font-size:12px;font-weight:500;color:var(--text2)}
+.arch-reason{font-size:10px;color:var(--text3);font-style:italic;margin-top:2px}
+.arch-btn{font-size:10px;padding:4px 9px;border-radius:10px;border:0.5px solid var(--border);background:var(--bg);cursor:pointer;margin-top:5px;color:var(--text2);font-family:inherit}
+
+/* ── BACKUP ─────────────────────────────────────────────── */
+.backup-card{background:var(--bg2);border-radius:var(--r);padding:12px;margin-bottom:8px;border:0.5px solid var(--border)}
+.backup-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+textarea.backup-area{width:100%;min-height:80px;font-size:10px;padding:8px;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--rsm);color:var(--text2);font-family:monospace;resize:none;margin-bottom:6px}
+
+/* ── WEEKEND PLAN ───────────────────────────────────────── */
+.weekend-card{background:var(--bg2);border-radius:var(--r);padding:11px 12px;margin-bottom:7px;border:0.5px solid var(--border)}
+.wknd-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:5px}
+.wknd-item{font-size:11px;color:var(--text2);padding:4px 0;display:flex;gap:8px;border-bottom:0.5px solid var(--border)}
+.wknd-item:last-child{border-bottom:none}
+.wknd-time{font-size:10px;color:var(--ptext);font-weight:600;min-width:36px;flex-shrink:0}
+
+/* ── MODALS ─────────────────────────────────────────────── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:none;align-items:flex-end}
+.overlay.open{display:flex}
+.modal{background:var(--bg);border-radius:var(--r) var(--r) 0 0;padding:20px 16px calc(24px + var(--safe-bot));width:100%;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:12px}
+.modal-cancel{width:100%;padding:12px;border:0.5px solid var(--border);background:var(--bg2);border-radius:var(--rsm);font-size:13px;cursor:pointer;color:var(--text2);margin-top:6px;font-family:inherit;font-weight:500}
+.defer-opt{padding:13px 14px;border-radius:var(--rsm);border:0.5px solid var(--border);font-size:13px;cursor:pointer;color:var(--text);display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;background:var(--bg)}
+.defer-opt:active{background:var(--bg2)}
+.move-opt{padding:13px 14px;border-radius:var(--rsm);border:0.5px solid var(--border);font-size:13px;cursor:pointer;color:var(--text);margin-bottom:5px;display:flex;align-items:center;gap:10px;background:var(--bg)}
+.move-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.edit-label{font-size:11px;color:var(--text2);margin-bottom:3px;font-weight:600}
+
+/* ── TOAST ──────────────────────────────────────────────── */
+.toast{position:fixed;bottom:calc(20px + var(--safe-bot));left:50%;transform:translateX(-50%);background:var(--pdark);color:#fff;padding:10px 18px;border-radius:20px;font-size:12px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:300;max-width:90vw;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.toast.show{opacity:1}
+
+/* ── LEVEL UP ANIMATION ─────────────────────────────────── */
+.levelup-overlay{position:fixed;inset:0;background:rgba(127,119,221,.95);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px}
+.levelup-overlay.show{display:flex;animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+.levelup-emoji{font-size:80px;margin-bottom:16px;animation:bounce 1s ease infinite alternate}
+@keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-10px)}}
+.levelup-title{font-size:14px;font-weight:600;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.levelup-name{font-size:32px;font-weight:800;color:#fff;margin-bottom:8px}
+.levelup-sub{font-size:15px;color:rgba(255,255,255,.8);margin-bottom:32px}
+.levelup-btn{padding:14px 40px;background:#fff;color:var(--pdark);border:none;border-radius:var(--r);font-size:15px;font-weight:800;font-family:inherit}
+</style>
+</head>
+<body>
+
+<!-- ── AUTH SCREEN ───────────────────────────────────────── -->
+<div class="auth-screen" id="auth-screen" style="display:none">
+  <div class="auth-logo">⚔️</div>
+  <div class="auth-title">Arseny RPG</div>
+  <div class="auth-sub">Твоя жизнь — это игра.<br>Войди по email — получишь ссылку.</div>
+  <div id="auth-form-wrap">
+    <input class="auth-input" type="email" id="auth-email" placeholder="твой@email.com" autocomplete="email">
+    <button class="auth-btn" onclick="sendMagicLink()">Войти →</button>
+    <div class="auth-hint">Мы пришлём magic link. Пароль не нужен.</div>
+  </div>
+  <div class="auth-magic-sent" id="auth-sent" style="display:none">
+    <div class="emoji">📬</div>
+    <p>Ссылка отправлена!<br>Проверь почту и перейди по ссылке.</p>
+  </div>
+</div>
+
+<!-- ── LOADING SCREEN ────────────────────────────────────── -->
+<div class="loading-screen" id="loading-screen">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Загрузка...</div>
+</div>
+
+<!-- ── ONBOARDING ────────────────────────────────────────── -->
+<div class="onboard" id="onboard" style="display:none">
+  <div class="onboard-dots" id="onboard-dots"></div>
+
+  <div class="onboard-step active" id="onboard-s0">
+    <div class="onboard-emoji">⚔️</div>
+    <div class="onboard-title">Добро пожаловать!</div>
+    <div class="onboard-sub">Это твоя жизнь в виде RPG.<br>Выполняй задачи — качай себя.<br>Зарабатывай ₾ на реальные награды.</div>
+    <button class="onboard-btn" onclick="nextOnboard()">Поехали →</button>
+  </div>
+
+  <div class="onboard-step" id="onboard-s1">
+    <div class="onboard-emoji">🎭</div>
+    <div class="onboard-title">Как тебя зовут?</div>
+    <div class="onboard-sub">Это имя будет отображаться в профиле.</div>
+    <input class="onboard-inp" id="onboard-name" placeholder="Твоё имя..." maxlength="20">
+    <button class="onboard-btn" onclick="nextOnboard()">Дальше →</button>
+  </div>
+
+  <div class="onboard-step" id="onboard-s2">
+    <div class="onboard-emoji">🎨</div>
+    <div class="onboard-title">Выбери аватар</div>
+    <div class="onboard-sub">Это твой персонаж.</div>
+    <div class="emoji-grid">
+      <span class="emoji-opt" onclick="selectAvatar(this)">⚔️</span>
+      <span class="emoji-opt" onclick="selectAvatar(this)">🦊</span>
+      <span class="emoji-opt" onclick="selectAvatar(this)">🐺</span>
+      <span class="emoji-opt" onclick="selectAvatar(this)">🦅</span>
+      <span class="emoji-opt" onclick="selectAvatar(this)">🐉</span>
+      <span class="emoji-opt" onclick="selectAvatar(this)">🏆</span>
+      <span class="emoji-opt" onclick="selectAvatar(this)">💎</span>
+      <span class="emoji-opt" onclick="selectAvatar(this)">🚀</span>
+      <span class="emoji-opt" onclick="selectAvatar(this)">👑</span>
+      <span class="emoji-opt" onclick="selectAvatar(this)">🔥</span>
+    </div>
+    <button class="onboard-btn" onclick="nextOnboard()">Дальше →</button>
+  </div>
+
+  <div class="onboard-step" id="onboard-s3">
+    <div class="onboard-emoji">🎯</div>
+    <div class="onboard-title">Как это работает</div>
+    <div class="onboard-sub">
+      <strong>P1 🔴</strong> — критично, ×2 XP и ₾<br>
+      <strong>P2 🟠</strong> — важно, ×1.5<br>
+      <strong>P3 🟡</strong> — стандарт, ×1.0<br>
+      <strong>P4 🟢</strong> — бонус, ×0.7<br><br>
+      Закрой все P1+P2 → +15₾ за день.<br>
+      Каждую неделю → +80₾.
+    </div>
+    <button class="onboard-btn" onclick="finishOnboard()">Начать игру 🎮</button>
+  </div>
+</div>
+
+<!-- ── LEVEL UP SCREEN ───────────────────────────────────── -->
+<div class="levelup-overlay" id="levelup-overlay">
+  <div class="levelup-emoji" id="lu-emoji">🏆</div>
+  <div class="levelup-title">Новый уровень!</div>
+  <div class="levelup-name" id="lu-name">Профи</div>
+  <div class="levelup-sub" id="lu-sub">Уровень 7 из 10</div>
+  <button class="levelup-btn" onclick="closeLevelUp()">Продолжать! 💪</button>
+</div>
+
+<!-- ── MAIN APP ──────────────────────────────────────────── -->
+<div class="app" id="main-app" style="display:none">
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="top-left">
+      <div class="char-name" id="char-name">Arseny RPG</div>
+      <div class="top-date" id="top-date"></div>
+    </div>
+    <div class="top-right">
+      <div class="lvl-badge" id="lvl-badge">Уровень 3</div>
+      <button class="profile-switch" onclick="switchProfile()" title="Сменить профиль">👤</button>
+    </div>
+  </div>
+
+  <!-- XP BAR -->
+  <div class="xp-row"><span id="xp-lvl-lbl">До: Пробуждённый</span><span id="xp-pct">30%</span></div>
+  <div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:30%"></div></div>
+
+  <!-- STREAK -->
+  <div class="streak-row">
+    <div class="streak-fire">🔥</div>
+    <div class="streak-info">
+      <div class="streak-val"><span id="streak-val">0</span> дней подряд</div>
+      <div class="streak-lbl">Серия выполнения P1+P2</div>
+    </div>
+    <div class="streak-dots" id="streak-dots"></div>
+  </div>
+
+  <!-- GEL BALANCE (rolling) -->
+  <div class="gel-balance-row">
+    <div class="gel-card main">
+      <div class="gel-lbl">Баланс ₾</div>
+      <div class="gel-val">₾<span id="gel-balance">0</span></div>
+      <div class="gel-sub">Earned: ₾<span id="gel-earned">0</span></div>
+    </div>
+    <div class="gel-card">
+      <div class="gel-lbl">Сегодня</div>
+      <div class="gel-val">₾<span id="pool-day">0</span></div>
+      <div class="gel-sub">из ₾<span id="pool-day-max">0</span></div>
+    </div>
+    <div class="gel-card">
+      <div class="gel-lbl">Неделя</div>
+      <div class="gel-val">₾<span id="pool-week">0</span></div>
+      <div class="gel-sub" id="week-bonus-hint">+80₾ бонус</div>
+    </div>
+  </div>
+
+  <!-- GOALS STRIP -->
+  <div class="goals-strip">
+    <div class="goal-card">
+      <div class="goal-lbl">Вес — цель −20 кг</div>
+      <div class="goal-val" id="g-weight">— кг</div>
+      <div class="goal-sub">цель: 100 кг</div>
+      <div class="goal-bar-bg"><div class="goal-bar-fill" id="g-weight-bar" style="width:0%;background:var(--green)"></div></div>
+    </div>
+    <div class="goal-card">
+      <div class="goal-lbl">Зарплата — цель ×2</div>
+      <div class="goal-val" id="g-salary">—€</div>
+      <div class="goal-sub">цель: 4600€ к 2027</div>
+      <div class="goal-bar-bg"><div class="goal-bar-fill" id="g-salary-bar" style="width:0%;background:var(--amber)"></div></div>
+    </div>
+  </div>
+
+  <div class="save-bar" id="save-bar">☁️ Сохранено</div>
+
+  <!-- TABS -->
+  <div class="tab-bar">
+    <button class="tab active" onclick="switchTab('today')">Сегодня</button>
+    <button class="tab" onclick="switchTab('week')">Неделя</button>
+    <button class="tab" onclick="switchTab('quarter')">Квартал</button>
+    <button class="tab" onclick="switchTab('stats')">Статы</button>
+    <button class="tab" onclick="switchTab('more')">Ещё</button>
+  </div>
+
+  <!-- ═══ TODAY ═══════════════════════════════════════════ -->
+  <div id="panel-today" class="panel active">
+    <div class="day-header-bar">
+      <div class="day-earned">+₾<span id="et">0</span> сегодня</div>
+      <div class="day-total"><span id="dc">0</span>/<span id="dtc">0</span> задач</div>
+    </div>
+    <div class="day-bonus-banner" id="day-bonus">🎉 Все P1+P2 выполнены → <strong>+15₾ бонус</strong> начислен!</div>
+
+    <!-- EVENING CHECK-IN (shows after 20:00) -->
+    <div class="checkin-card" id="checkin-card" style="display:none">
+      <div class="checkin-title">🌙 Вечерний чекин</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px">Как прошёл день?</div>
+      <div class="mood-row">
+        <button class="mood-btn" onclick="setMood(1)" id="mood-1">😴</button>
+        <button class="mood-btn" onclick="setMood(2)" id="mood-2">😐</button>
+        <button class="mood-btn" onclick="setMood(3)" id="mood-3">🙂</button>
+        <button class="mood-btn" onclick="setMood(4)" id="mood-4">🔥</button>
+      </div>
+      <div class="tomorrow-lbl">Главная задача на завтра</div>
+      <input id="tomorrow-task" placeholder="Одна конкретная задача...">
+      <div class="tomorrow-lbl" style="margin-top:4px">Заметка о дне (опционально)</div>
+      <textarea class="note-inp" id="day-note" placeholder="Что было хорошо? Что мешало?"></textarea>
+      <button class="btn" onclick="saveCheckin()" style="margin-top:4px">Сохранить чекин</button>
+    </div>
+
+    <div class="sec-hdr">
+      <div class="sec-ico work" style="font-size:13px">💼</div>
+      <div class="sec-lbl">Рабочие</div>
+      <div class="sec-cnt" id="wc"></div>
+      <div class="sec-gel" id="wg"></div>
+    </div>
+    <div id="work-list"></div>
+
+    <div class="divider"></div>
+    <div class="sec-hdr">
+      <div class="sec-ico personal" style="font-size:13px">🌿</div>
+      <div class="sec-lbl">Личные</div>
+      <div class="sec-cnt" id="pc"></div>
+      <div class="sec-gel" id="pg"></div>
+    </div>
+    <div id="personal-list"></div>
+
+    <div class="divider"></div>
+    <div class="sec-hdr">
+      <div class="sec-ico base" style="font-size:13px">🔄</div>
+      <div class="sec-lbl">Базовые привычки</div>
+      <div class="sec-cnt" id="bc"></div>
+      <div class="sec-gel" id="bg"></div>
+    </div>
+    <div id="base-list"></div>
+
+    <div class="divider"></div>
+    <div class="add-card">
+      <div class="add-title">+ Добавить задачу на сегодня</div>
+      <input id="ai-name" placeholder="Название задачи...">
+      <div class="row" style="margin-bottom:6px">
+        <select id="ai-sec"><option value="work">💼 Рабочая</option><option value="personal">🌿 Личная</option><option value="base">🔄 Базовая</option></select>
+        <select id="ai-pri"><option value="p1">P1 🔴</option><option value="p2">P2 🟠</option><option value="p3" selected>P3 🟡</option><option value="p4">P4 🟢</option></select>
+      </div>
+      <div class="row" style="margin-bottom:6px">
+        <select id="ai-stat"><option value="gld">GLD Золото</option><option value="vit">VIT Жизнь</option><option value="str">STR Сила</option><option value="int">INT Интеллект</option><option value="dex">DEX Фокус</option><option value="cha">CHA Харизма</option></select>
+        <input id="ai-time" placeholder="09:00" style="flex:0 0 70px">
+      </div>
+      <div class="row" style="margin-bottom:6px">
+        <div style="flex:1">
+          <div class="edit-label">XP (база)</div>
+          <input id="ai-xp" type="number" placeholder="20" value="20">
+        </div>
+        <div style="flex:1">
+          <div class="edit-label">₾ (база)</div>
+          <input id="ai-gel" type="number" placeholder="1.5" step="0.5">
+        </div>
+      </div>
+      <select id="ai-type" style="margin-bottom:6px">
+        <option value="daily">Только сегодня (разовая)</option>
+        <option value="daily_recurring" selected>Ежедневная привычка</option>
+        <option value="weekly">Недельная задача</option>
+      </select>
+      <div id="ai-weekday-wrap" style="display:none;margin-bottom:6px">
+        <select id="ai-weekday"><option value="Mon">Понедельник</option><option value="Tue">Вторник</option><option value="Wed">Среда</option><option value="Thu">Четверг</option><option value="Fri">Пятница</option><option value="Sat">Суббота</option><option value="Sun">Воскресенье</option></select>
+      </div>
+      <button class="btn" onclick="addTask()">Добавить</button>
+    </div>
+  </div>
+
+  <!-- ═══ WEEK ════════════════════════════════════════════ -->
+  <div id="panel-week" class="panel">
+    <div style="background:var(--alight);border:0.5px solid rgba(186,117,23,.3);border-radius:var(--r);padding:10px 12px;margin-bottom:9px">
+      <div style="font-size:12px;font-weight:700;color:var(--atext);margin-bottom:2px">Недельная награда</div>
+      <div style="font-size:10px;color:var(--atext)">Все P1+P2 каждый день → <strong>+80₾</strong> · Добавляется к балансу автоматически</div>
+    </div>
+    <div id="week-bonus-banner" style="display:none" class="q-bonus-banner">
+      <div class="q-bonus-t">🎉 Неделя закрыта! +80₾ бонус!</div>
+      <div class="q-bonus-d">Все P1+P2 выполнены каждый день этой недели.</div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">Эта неделя · <span id="week-lbl"></span></div>
+    <div id="week-list"></div>
+    <div class="add-card" style="margin-top:8px">
+      <div class="add-title">+ Добавить недельную задачу</div>
+      <input id="wi-name" placeholder="Название...">
+      <div class="row" style="margin-bottom:6px">
+        <select id="wi-day"><option value="Mon">Понедельник</option><option value="Tue">Вторник</option><option value="Wed">Среда</option><option value="Thu">Четверг</option><option value="Fri">Пятница</option><option value="Sat">Суббота</option><option value="Sun">Воскресенье</option></select>
+        <select id="wi-sec"><option value="work">💼 Работа</option><option value="personal">🌿 Личная</option></select>
+      </div>
+      <div class="row" style="margin-bottom:6px">
+        <select id="wi-pri"><option value="p1">P1 🔴</option><option value="p2">P2 🟠</option><option value="p3" selected>P3 🟡</option><option value="p4">P4 🟢</option></select>
+        <select id="wi-stat"><option value="gld">GLD</option><option value="vit">VIT</option><option value="str">STR</option><option value="int">INT</option><option value="dex">DEX</option><option value="cha">CHA</option></select>
+        <input id="wi-time" placeholder="09:00" style="flex:0 0 60px">
+      </div>
+      <button class="btn" onclick="addWeekTask()">Добавить</button>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 7px">Выходные — план</div>
+    <div class="weekend-card">
+      <div class="wknd-title">Суббота — восстановление</div>
+      <div class="wknd-item"><span class="wknd-time">10:00</span><span>Проснуться без будильника, завтрак</span></div>
+      <div class="wknd-item"><span class="wknd-time">11:30</span><span>Прогулка 5000 шагов</span></div>
+      <div class="wknd-item"><span class="wknd-time">14:00</span><span>Свободно — Dota, шахматы, кальян</span></div>
+      <div class="wknd-item"><span class="wknd-time">17:00</span><span>Рабочий блок 1.5 часа</span></div>
+      <div class="wknd-item"><span class="wknd-time">19:00</span><span>Ужин с Валей</span></div>
+      <div class="wknd-item"><span class="wknd-time">23:00</span><span>Книга. Сон до 01:00</span></div>
+    </div>
+    <div class="weekend-card">
+      <div class="wknd-title">Воскресенье — вход в неделю</div>
+      <div class="wknd-item"><span class="wknd-time">09:30</span><span>Подъём, кофе без спешки</span></div>
+      <div class="wknd-item"><span class="wknd-time">11:00</span><span>Рабочий блок 2 часа: планы, Jira</span></div>
+      <div class="wknd-item"><span class="wknd-time">17:00</span><span>Время с Валей</span></div>
+      <div class="wknd-item"><span class="wknd-time">21:00</span><span>Подготовка к понедельнику</span></div>
+      <div class="wknd-item"><span class="wknd-time">23:00</span><span>Книга. Сон до 00:30</span></div>
+    </div>
+  </div>
+
+  <!-- ═══ QUARTER ══════════════════════════════════════════ -->
+  <div id="panel-quarter" class="panel">
+    <div style="background:var(--glight);border:0.5px solid rgba(29,158,117,.3);border-radius:var(--r);padding:10px 12px;margin-bottom:9px">
+      <div style="font-size:12px;font-weight:700;color:var(--gtext);margin-bottom:2px">Квартальная награда</div>
+      <div style="font-size:10px;color:var(--gtext)">Все P1+P2 квестов → <strong>+300₾</strong> · Noize MC в Сербии 🎸</div>
+    </div>
+    <div id="quarter-content"></div>
+    <div class="add-card" style="margin-top:8px">
+      <div class="add-title">+ Добавить квартальный квест</div>
+      <input id="qi-name" placeholder="Название квеста...">
+      <div class="row" style="margin-bottom:6px">
+        <select id="qi-quarter"><option value="Q2 2026">Q2 2026</option><option value="Q3 2026">Q3 2026</option><option value="Q4 2026">Q4 2026</option><option value="Q1 2027">Q1 2027</option></select>
+        <select id="qi-sec"><option value="work">💼 Работа</option><option value="personal">🌿 Личная</option></select>
+      </div>
+      <div class="row" style="margin-bottom:6px">
+        <select id="qi-pri"><option value="p1">P1 🔴</option><option value="p2">P2 🟠</option><option value="p3" selected>P3 🟡</option><option value="p4">P4 🟢</option></select>
+        <select id="qi-stat"><option value="gld">GLD</option><option value="int">INT</option><option value="str">STR</option><option value="vit">VIT</option><option value="dex">DEX</option><option value="cha">CHA</option></select>
+      </div>
+      <button class="btn" onclick="addQuarterTask()">Добавить квест</button>
+    </div>
+  </div>
+
+  <!-- ═══ STATS ════════════════════════════════════════════ -->
+  <div id="panel-stats" class="panel">
+    <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">Характеристики</div>
+    <div class="stats-grid" id="stats-grid"></div>
+    <div style="background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r);padding:11px 12px;font-size:12px;color:var(--text2);line-height:2;margin-bottom:8px">
+      Сумма: <strong style="color:var(--text)" id="s-sum">0</strong>/600 &nbsp;·&nbsp;
+      Уровень: <strong style="color:var(--ptext)" id="s-lvl">Личинка</strong><br>
+      XP заработано: <strong style="color:var(--text)" id="s-xp">0</strong> &nbsp;·&nbsp;
+      GEL earned: <strong style="color:var(--gtext)" id="s-gel">0</strong>₾
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Work-life balance</div>
+    <div class="wlb-grid" id="wlb-grid"></div>
+    <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">История чекинов</div>
+    <div id="checkin-history"></div>
+    <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;margin-top:8px">Журнал событий</div>
+    <div id="log-list"></div>
+  </div>
+
+  <!-- ═══ MORE ═════════════════════════════════════════════ -->
+  <div id="panel-more" class="panel">
+
+    <!-- GEL balance manual edit -->
+    <div style="background:var(--plight);border:0.5px solid rgba(127,119,221,.3);border-radius:var(--r);padding:12px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--ptext);margin-bottom:6px">💰 Reward Balance</div>
+      <div style="font-size:24px;font-weight:800;color:var(--pdark);margin-bottom:4px">₾<span id="bal-display">0</span></div>
+      <div style="font-size:10px;color:var(--ptext);margin-bottom:10px">Earned total: ₾<span id="earned-display">0</span></div>
+      <div class="row">
+        <input id="bal-adj" type="number" placeholder="Сумма (напр. 25)" step="0.5" style="margin-bottom:0">
+        <button class="btn sm" onclick="manualBalanceAdj(1)" style="background:var(--green)">+Добавить</button>
+        <button class="btn sm" onclick="manualBalanceAdj(-1)" style="background:var(--red)">−Списать</button>
+      </div>
+      <div style="font-size:10px;color:var(--ptext);margin-top:6px">Для ручной корректировки баланса (офлайн покупки, бонусы)</div>
+    </div>
+
+    <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">Магазин наград</div>
+    <div id="rewards-list"></div>
+    <button class="btn secondary" style="margin-bottom:10px;font-size:12px" onclick="openM('add-reward-modal')">+ Добавить награду</button>
+
+    <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px">История трат</div>
+    <div id="spent-list"></div>
+
+    <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px">Цели — обновить</div>
+    <div style="background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:8px">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:5px">Текущий вес (кг)</div>
+      <div class="row" style="margin-bottom:8px">
+        <input id="weight-inp" type="number" placeholder="120" style="margin-bottom:0;flex:1">
+        <button class="btn secondary" style="width:auto;padding:9px 14px;font-size:12px" onclick="updateWeight()">Обновить</button>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:5px">Текущая зарплата (€)</div>
+      <div class="row">
+        <input id="salary-inp" type="number" placeholder="2300" style="margin-bottom:0;flex:1">
+        <button class="btn secondary" style="width:auto;padding:9px 14px;font-size:12px" onclick="updateSalary()">Обновить</button>
+      </div>
+    </div>
+
+    <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px">Архив задач (<span id="arch-cnt">0</span>)</div>
+    <div id="arch-list"></div>
+
+    <div style="margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border)">
+      <button class="btn secondary" style="margin-bottom:6px;font-size:12px" onclick="resetDay()">🌅 Новый день (сбросить отметки)</button>
+      <div style="font-size:10px;color:var(--text2);text-align:center;margin-bottom:10px">GEL баланс и XP сохранятся</div>
+      <button class="btn danger" style="font-size:12px" onclick="signOut()">🚪 Выйти из аккаунта</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODALS ════════════════════════════════════ -->
+
+<!-- DEFER -->
+<div class="overlay" id="defer-modal">
+  <div class="modal">
+    <div class="modal-title">Перенести задачу</div>
+    <div id="defer-opts"></div>
+    <div style="padding-top:10px;border-top:0.5px solid var(--border);margin-top:4px">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:5px">Конкретная дата:</div>
+      <input type="date" id="d-date" style="margin-bottom:5px">
+      <input type="time" id="d-time" style="margin-bottom:8px">
+      <button class="btn" onclick="deferCustom()">Перенести на эту дату</button>
+    </div>
+    <button class="modal-cancel" onclick="closeM('defer-modal')">Отмена</button>
+  </div>
+</div>
+
+<!-- MOVE -->
+<div class="overlay" id="move-modal">
+  <div class="modal">
+    <div class="modal-title">Переместить в раздел</div>
+    <div class="move-opt" onclick="confirmMove('work')"><div class="move-dot" style="background:var(--blue)"></div>💼 Рабочие задачи</div>
+    <div class="move-opt" onclick="confirmMove('personal')"><div class="move-dot" style="background:var(--green)"></div>🌿 Личные задачи</div>
+    <button class="modal-cancel" onclick="closeM('move-modal')">Отмена</button>
+  </div>
+</div>
+
+<!-- DELETE -->
+<div class="overlay" id="del-modal">
+  <div class="modal">
+    <div class="modal-title">Удалить в архив</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px" id="del-name"></div>
+    <input id="del-reason" placeholder="Причина удаления (обязательно)...">
+    <button class="btn danger" style="margin-bottom:0" onclick="confirmDel()">Удалить в архив</button>
+    <button class="modal-cancel" onclick="closeM('del-modal')">Отмена</button>
+  </div>
+</div>
+
+<!-- EDIT TASK -->
+<div class="overlay" id="edit-task-modal">
+  <div class="modal">
+    <div class="modal-title">Редактировать задачу</div>
+    <div class="edit-label">Название</div>
+    <input id="et-name" placeholder="Название задачи...">
+    <div class="row" style="margin-bottom:6px">
+      <div style="flex:1"><div class="edit-label">Раздел</div>
+        <select id="et-sec"><option value="work">💼 Рабочая</option><option value="personal">🌿 Личная</option><option value="base">🔄 Базовая</option></select></div>
+      <div style="flex:1"><div class="edit-label">Приоритет</div>
+        <select id="et-pri"><option value="p1">P1 🔴</option><option value="p2">P2 🟠</option><option value="p3">P3 🟡</option><option value="p4">P4 🟢</option></select></div>
+    </div>
+    <div class="row" style="margin-bottom:6px">
+      <div style="flex:1"><div class="edit-label">Стат</div>
+        <select id="et-stat"><option value="gld">GLD</option><option value="vit">VIT</option><option value="str">STR</option><option value="int">INT</option><option value="dex">DEX</option><option value="cha">CHA</option></select></div>
+      <div style="flex:1"><div class="edit-label">Время</div>
+        <input id="et-time" placeholder="09:00"></div>
+    </div>
+    <div class="row" style="margin-bottom:6px">
+      <div style="flex:1"><div class="edit-label">XP (база)</div><input id="et-xp" type="number"></div>
+      <div style="flex:1"><div class="edit-label">₾ (база)</div><input id="et-gel" type="number" step="0.5"></div>
+    </div>
+    <button class="btn" onclick="saveEditTask()">Сохранить</button>
+    <button class="modal-cancel" onclick="closeM('edit-task-modal')">Отмена</button>
+  </div>
+</div>
+
+<!-- ADD REWARD -->
+<div class="overlay" id="add-reward-modal">
+  <div class="modal">
+    <div class="modal-title" id="reward-modal-title">Новая награда</div>
+    <div class="edit-label">Название</div>
+    <input id="rw-name" placeholder="Барбер + кофе">
+    <div class="row" style="margin-bottom:6px">
+      <div style="flex:1"><div class="edit-label">Стоимость ₾</div><input id="rw-cost" type="number" placeholder="80" step="0.5"></div>
+      <div style="flex:1"><div class="edit-label">Период</div>
+        <select id="rw-period"><option value="any">Любой</option><option value="day">Дневная</option><option value="week">Недельная</option><option value="quarter">Квартальная</option></select></div>
+    </div>
+    <button class="btn" onclick="saveReward()">Сохранить</button>
+    <button class="btn danger" id="del-reward-btn" style="display:none;margin-top:6px" onclick="deleteReward()">Удалить награду</button>
+    <button class="modal-cancel" onclick="closeM('add-reward-modal')">Отмена</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// ██████╗ ██████╗  ██████╗     ██████╗ ██████╗  ██████╗
+// ██╔══██╗██╔══██╗██╔════╝    ██╔══██╗██╔══██╗██╔════╝
+// ██████╔╝██████╔╝██║  ███╗   ██████╔╝██████╔╝██║  ███╗
+// ██╔══██╗██╔═══╝ ██║   ██║   ██╔══██╗██╔═══╝ ██║   ██║
+// ██║  ██║██║     ╚██████╔╝   ██║  ██║██║     ╚██████╔╝
+// ARSENY RPG BETA — with Supabase cloud sync
+// ═══════════════════════════════════════════════════════════════
+
+// ── CONFIG — REPLACE WITH YOUR SUPABASE CREDENTIALS ──────────
+// Get these from: Supabase Dashboard → Project Settings → API
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';       // e.g. https://xxxx.supabase.co
+const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';  // public anon key (safe to expose)
+// ─────────────────────────────────────────────────────────────
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── CONSTANTS ─────────────────────────────────────────────────
+const LEVELS=[
+  {min:0,max:100,n:1,name:'Личинка',emoji:'🥚'},
+  {min:101,max:180,n:2,name:'Слабак',emoji:'💤'},
+  {min:181,max:260,n:3,name:'Середняк',emoji:'🚶'},
+  {min:261,max:330,n:4,name:'Пробуждённый',emoji:'⚡'},
+  {min:331,max:400,n:5,name:'Заряженный',emoji:'🔥'},
+  {min:401,max:460,n:6,name:'Игрок',emoji:'🎯'},
+  {min:461,max:510,n:7,name:'Профи',emoji:'🏆'},
+  {min:511,max:550,n:8,name:'Элита',emoji:'💎'},
+  {min:551,max:580,n:9,name:'Легенда',emoji:'🚀'},
+  {min:581,max:600,n:10,name:'Арсений v10.0',emoji:'👑'}
+];
+// XP multipliers by priority
+const PM={p1:2.0,p2:1.5,p3:1.0,p4:0.7};
+// Default GEL base values by priority
+const PG_DEFAULT={p1:4,p2:2.5,p3:1.5,p4:0.7};
+const PL={p1:'P1 🔴',p2:'P2 🟠',p3:'P3 🟡',p4:'P4 🟢'};
+const PO={p1:0,p2:1,p3:2,p4:3};
+// Whether priority gets defer penalty
+const DP={p1:true,p2:true,p3:true,p4:false};
+const SC={str:'#1D9E75',int:'#7F77DD',gld:'#BA7517',vit:'#D4537E',dex:'#378ADD',cha:'#D85A30'};
+const SL={str:'Сила',int:'Интеллект',gld:'Золото',vit:'Жизнь',dex:'Фокус',cha:'Харизма'};
+const WK=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const WN={Mon:'Понедельник',Tue:'Вторник',Wed:'Среда',Thu:'Четверг',Fri:'Пятница',Sat:'Суббота',Sun:'Воскресенье'};
+const DAY_BONUS=15;
+const WEEK_BONUS=80;
+const QTR_BONUS=300;
+const SAVE_KEY_LOCAL='arseny_rpg_beta_v1'; // localStorage cache key
+
+// ── STATE ─────────────────────────────────────────────────────
+let PROFILE = null;   // current Supabase profile row
+let G = null;         // current game state (user_state row + derived)
+let TASKS = [];       // all tasks for current profile
+let REWARDS = [];     // all rewards for current profile
+let LOGS = [];        // recent event_log entries
+let CHECKINS = [];    // recent checkins
+let SPENT = [];       // recent spent_log
+
+// ── HELPERS ───────────────────────────────────────────────────
+const r2=n=>Math.round(n*100)/100;
+const cXP=(b,p,pen)=>Math.round(b*PM[p]*(pen?.5:1));
+const cGEL=(g,pen)=>r2(g*(pen?.5:1));
+function getLevel(s){for(const l of LEVELS)if(s>=l.min&&s<=l.max)return l;return LEVELS[9];}
+function sortP(arr){return[...arr].sort((a,b)=>PO[a.priority]-PO[b.priority]);}
+function todayStr(){return new Date().toLocaleDateString('ru',{weekday:'long',day:'numeric',month:'long'});}
+function todayKey(){return new Date().toDateString();}
+function todayShort(){return new Date().toLocaleDateString('ru',{day:'numeric',month:'short'});}
+function nowTime(){return new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});}
+function weekStart(){
+  const today=new Date();const dow=today.getDay();
+  const ws=new Date(today);ws.setDate(today.getDate()+(dow===0?-6:1-dow));
+  return ws.toDateString();
+}
+function uid(){return 'u'+Date.now()+'_'+Math.random().toString(36).slice(2,7);}
+
+// ── LOCAL CACHE ───────────────────────────────────────────────
+function saveLocal(){
+  try{localStorage.setItem(SAVE_KEY_LOCAL,JSON.stringify({G,TASKS,REWARDS,LOGS,CHECKINS,SPENT,PROFILE}));}catch(e){}
+}
+function loadLocal(){
+  try{const r=localStorage.getItem(SAVE_KEY_LOCAL);return r?JSON.parse(r):null;}catch(e){return null;}
+}
+
+// ── SUPABASE AUTH ─────────────────────────────────────────────
+async function sendMagicLink(){
+  const email=document.getElementById('auth-email').value.trim();
+  if(!email||!email.includes('@')){toast('Введи корректный email');return;}
+  const{error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.href}});
+  if(error){toast('Ошибка: '+error.message);return;}
+  document.getElementById('auth-form-wrap').style.display='none';
+  document.getElementById('auth-sent').style.display='block';
+}
+async function signOut(){
+  if(!confirm('Выйти из аккаунта?'))return;
+  saveLocal();
+  await sb.auth.signOut();
+  location.reload();
+}
+function switchProfile(){
+  if(confirm('Переключить профиль? Выйдешь из текущего аккаунта.')){signOut();}
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+async function init(){
+  showLoading(true);
+  // Listen for auth state
+  sb.auth.onAuthStateChange(async(event,session)=>{
+    if(session){
+      await loadUserData(session.user.email);
+    }else{
+      showLoading(false);
+      showAuth(true);
+    }
+  });
+  // Also check existing session immediately
+  const{data:{session}}=await sb.auth.getSession();
+  if(!session){
+    showLoading(false);
+    showAuth(true);
+  }
+}
+
+// ── LOAD USER DATA ─────────────────────────────────────────────
+async function loadUserData(email){
+  showLoading(true);
+  try{
+    // 1. Get or create profile
+    let{data:prof}=await sb.from('profiles').select('*').eq('email',email).single();
+    if(!prof){
+      // New user — show onboarding
+      const{data:newProf}=await sb.from('profiles').insert({email,name:'Player',avatar_emoji:'⚔️'}).select().single();
+      PROFILE=newProf;
+      showLoading(false);
+      showOnboarding(true);
+      return;
+    }
+    PROFILE=prof;
+
+    // 2. Check if onboarding was completed (name changed from default)
+    const needsOnboard=!localStorage.getItem('onboard_done_'+PROFILE.id);
+    if(needsOnboard&&PROFILE.name==='Player'){
+      showLoading(false);
+      showOnboarding(true);
+      return;
+    }
+
+    // 3. Load game state
+    await refreshAllData();
+    checkNewDay();
+    showLoading(false);
+    showApp(true);
+    renderAll();
+  }catch(e){
+    console.error(e);
+    // Fallback to local cache
+    const cached=loadLocal();
+    if(cached){
+      ({G,TASKS,REWARDS,LOGS,CHECKINS,SPENT,PROFILE}=cached);
+      showLoading(false);
+      showApp(true);
+      renderAll();
+      toast('⚠️ Оффлайн — данные из кэша');
+    }else{
+      showLoading(false);
+      showAuth(true);
+      toast('Ошибка загрузки данных');
+    }
+  }
+}
+
+async function refreshAllData(){
+  if(!PROFILE)return;
+  const pid=PROFILE.id;
+
+  // Load state
+  let{data:st}=await sb.from('user_state').select('*').eq('profile_id',pid).single();
+  if(!st){
+    // Create initial state
+    const{data:newSt}=await sb.from('user_state').insert({
+      profile_id:pid,
+      stat_str:50,stat_int:47,stat_gld:34,stat_vit:32,stat_dex:15,stat_cha:20,
+      total_xp:0,gel_earned:0,gel_balance:0,
+      pool_day:0,pool_week:0,pool_qtr:0,
+      streak:0,streak_best:0,streak_last_date:'',
+      day_bonus_given:false,week_bonus_given:false,
+      goal_weight:120,goal_salary:2300,
+      tomorrow_task:'',last_day_date:'',last_week_date:''
+    }).select().single();
+    st=newSt;
+  }
+  G=st;
+
+  // Load tasks
+  const{data:tasks}=await sb.from('tasks').select('*').eq('profile_id',pid).neq('status','archived');
+  TASKS=tasks||[];
+
+  // If no tasks exist and this is Arseny, seed default tasks
+  if(TASKS.length===0&&PROFILE.name==='Арсений'){
+    await seedDefaultTasks(pid);
+    const{data:tasks2}=await sb.from('tasks').select('*').eq('profile_id',pid).neq('status','archived');
+    TASKS=tasks2||[];
+  }
+
+  // If no rewards, seed defaults
+  const{data:rewards}=await sb.from('rewards').select('*').eq('profile_id',pid).eq('is_active',true);
+  REWARDS=rewards||[];
+  if(REWARDS.length===0){
+    await seedDefaultRewards(pid);
+    const{data:r2}=await sb.from('rewards').select('*').eq('profile_id',pid).eq('is_active',true);
+    REWARDS=r2||[];
+  }
+
+  // Load logs (recent 30)
+  const{data:logs}=await sb.from('event_log').select('*').eq('profile_id',pid).order('created_at',{ascending:false}).limit(30);
+  LOGS=logs||[];
+
+  // Load checkins (recent 14)
+  const{data:chk}=await sb.from('checkins').select('*').eq('profile_id',pid).order('created_at',{ascending:false}).limit(14);
+  CHECKINS=chk||[];
+
+  // Load spent (recent 20)
+  const{data:sp}=await sb.from('spent_log').select('*').eq('profile_id',pid).order('created_at',{ascending:false}).limit(20);
+  SPENT=sp||[];
+
+  saveLocal();
+}
+
+// ── SEED DEFAULT DATA ─────────────────────────────────────────
+async function seedDefaultTasks(pid){
+  const mk=(id,name,xp,stat,pri,sec,type,time,weekday,quarter,gel)=>({
+    id:id+'_'+pid.slice(0,8),profile_id:pid,name,xp_base:xp,
+    gel_base:gel||PG_DEFAULT[pri],stat,priority:pri,section:sec,
+    task_type:type,week_day:weekday||null,quarter:quarter||null,
+    time_hint:time||'',status:'pending',defer_penalty:false,is_recurring:type!=='oneoff'
+  });
+  const tasks=[
+    mk('b1','Не есть сладкое',25,'vit','p1','base','daily',''),
+    mk('b2','Принять лекарства',25,'vit','p1','base','daily','после еды'),
+    mk('b3','Траты не более 100₾',20,'gld','p1','base','daily',''),
+    mk('b4','Обед',20,'vit','p1','base','daily','15:00'),
+    mk('b5','Завтрак',15,'vit','p2','base','daily','12:00'),
+    mk('b6','Ужин',15,'vit','p2','base','daily','19:00'),
+    mk('b7','Утренняя зарядка',15,'str','p3','base','daily','08:30'),
+    mk('b8','Утренняя прогулка',15,'str','p3','base','daily','09:30'),
+    mk('b9','Вечерняя зарядка',15,'str','p3','base','daily','20:00'),
+    mk('b10','Вечерняя прогулка',15,'str','p3','base','daily','21:00'),
+    mk('b11','Читать книгу 1 час',15,'int','p4','base','daily','23:00'),
+    mk('b12','Не думскроллить',10,'dex','p4','base','daily',''),
+    mk('w1','Утренний отчёт по странам (IT/IE/HU)',40,'gld','p1','work','daily','09:00'),
+    mk('w2','Расписать планы на неделю',25,'gld','p1','work','daily','10:00'),
+    mk('w3','Ответить на запросы, пройтись по Jira',25,'gld','p2','work','daily','11:00'),
+    mk('p1t','Провести время с Валей',20,'cha','p4','personal','daily','вечер'),
+    mk('wk1','Влиться в рабочий процесс: задачи, ответы, метрики',50,'gld','p1','work','weekly','09:00','Mon',null,null),
+    mk('wk2','Проверить газовый бойлер',30,'dex','p2','personal','weekly','11:00','Mon',null,null),
+    mk('wk3','Записаться к барберу',15,'cha','p3','personal','weekly','','Tue',null,null),
+    mk('wk4','Сходить к барберу',20,'cha','p3','personal','weekly','','Thu',null,null),
+    mk('wk5','Итоги недели',20,'gld','p2','work','weekly','17:00','Fri',null,null),
+    mk('q1','Дочитать книгу',60,'int','p1','personal','quarterly','',null,'Q2 2026',12),
+    mk('q2','Гео-паспорт: Венгрия',80,'gld','p1','work','quarterly','',null,'Q2 2026',16),
+    mk('q3','Гео-паспорт: Италия',70,'gld','p2','work','quarterly','',null,'Q2 2026',7.5),
+    mk('q4','Гео-паспорт: Ирландия',70,'gld','p2','work','quarterly','',null,'Q2 2026',7.5),
+    mk('q5','Видеофлоу платёжек: Венгрия',50,'gld','p3','work','quarterly','',null,'Q2 2026',3),
+    mk('q6','Видеофлоу платёжек: Италия',50,'gld','p3','work','quarterly','',null,'Q2 2026',3),
+    mk('q7','Семейный бюджет на двоих',45,'cha','p2','personal','quarterly','',null,'Q2 2026',5),
+    mk('q8','Купить билеты Noize MC',30,'cha','p3','personal','quarterly','',null,'Q2 2026',1.5),
+    mk('q9','Спланировать поездку на концерт',35,'cha','p3','personal','quarterly','',null,'Q2 2026',1.5),
+    mk('q10','Минус 5 кг',150,'str','p1','personal','quarterly','',null,'Q3 2026',32),
+    mk('q11','Водительские права',100,'int','p2','personal','quarterly','',null,'Q3 2026',12.5),
+    mk('q12','Освоить 3 AI-инструмента',90,'int','p2','work','quarterly','',null,'Q3 2026',10),
+  ];
+  await sb.from('tasks').insert(tasks);
+}
+
+async function seedDefaultRewards(pid){
+  const rewards=[
+    {id:'rd1_'+pid.slice(0,8),profile_id:pid,name:'Любимый напиток / снек',gel_cost:8,period:'day'},
+    {id:'rd2_'+pid.slice(0,8),profile_id:pid,name:'Кальян-вечер дома',gel_cost:20,period:'day'},
+    {id:'rd3_'+pid.slice(0,8),profile_id:pid,name:'Ужин вне дома',gel_cost:35,period:'day'},
+    {id:'rw1_'+pid.slice(0,8),profile_id:pid,name:'Барбер + кофе',gel_cost:60,period:'week'},
+    {id:'rw2_'+pid.slice(0,8),profile_id:pid,name:'Подписка на сервис',gel_cost:80,period:'week'},
+    {id:'rw3_'+pid.slice(0,8),profile_id:pid,name:'Ужин с Валей в ресторане',gel_cost:150,period:'week'},
+    {id:'rq1_'+pid.slice(0,8),profile_id:pid,name:'Гаджет / одежда',gel_cost:300,period:'quarter'},
+    {id:'rq2_'+pid.slice(0,8),profile_id:pid,name:'Билеты Noize MC',gel_cost:500,period:'quarter'},
+    {id:'rq3_'+pid.slice(0,8),profile_id:pid,name:'Поездка: концерт + отель',gel_cost:800,period:'quarter'},
+  ];
+  await sb.from('rewards').insert(rewards);
+}
+
+// ── SAVE STATE TO SUPABASE ────────────────────────────────────
+let saveTimer=null;
+async function save(){
+  showSaveBar();
+  saveLocal();
+  // Debounce cloud save by 1s to avoid too many requests
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(async()=>{
+    if(!PROFILE||!G)return;
+    await sb.from('user_state').update({
+      stat_str:G.stat_str,stat_int:G.stat_int,stat_gld:G.stat_gld,
+      stat_vit:G.stat_vit,stat_dex:G.stat_dex,stat_cha:G.stat_cha,
+      total_xp:G.total_xp,gel_earned:G.gel_earned,gel_balance:G.gel_balance,
+      pool_day:G.pool_day,pool_week:G.pool_week,pool_qtr:G.pool_qtr,
+      streak:G.streak,streak_best:G.streak_best,streak_last_date:G.streak_last_date,
+      day_bonus_given:G.day_bonus_given,week_bonus_given:G.week_bonus_given,
+      goal_weight:G.goal_weight,goal_salary:G.goal_salary,
+      tomorrow_task:G.tomorrow_task,last_day_date:G.last_day_date,last_week_date:G.last_week_date
+    }).eq('profile_id',PROFILE.id);
+  },1000);
+}
+function showSaveBar(){
+  const b=document.getElementById('save-bar');
+  b.classList.add('show');setTimeout(()=>b.classList.remove('show'),2000);
+}
+
+// ── AUTO NEW DAY ──────────────────────────────────────────────
+async function checkNewDay(){
+  if(!G)return;
+  const today=todayKey();
+  const thisWeekStart=weekStart();
+
+  if(G.last_day_date && G.last_day_date!==today){
+    // Day changed — check streak
+    const p12=getDailyTasks().filter(t=>(t.priority==='p1'||t.priority==='p2')&&t.status!=='deferred'&&t.status!=='archived');
+    const allDone=p12.length>0&&p12.every(t=>t.status==='done');
+    if(allDone){G.streak=(G.streak||0)+1;if(G.streak>G.streak_best)G.streak_best=G.streak;}
+    else{G.streak=0;}
+    G.streak_last_date=G.last_day_date;
+
+    // Reset daily task statuses (recurring ones)
+    const dailyIds=TASKS.filter(t=>t.task_type==='daily'&&t.is_recurring).map(t=>t.id);
+    if(dailyIds.length>0){
+      await sb.from('tasks').update({status:'pending',defer_penalty:false}).in('id',dailyIds);
+      TASKS=TASKS.map(t=>dailyIds.includes(t.id)?{...t,status:'pending',defer_penalty:false}:t);
+    }
+
+    G.day_bonus_given=false;
+    G.pool_day=0;
+    if(G.tomorrow_task){
+      toast('Задача на сегодня: '+G.tomorrow_task.slice(0,35));
+      G.tomorrow_task='';
+    }
+  }
+
+  // Check week reset
+  if(G.last_week_date && G.last_week_date!==thisWeekStart){
+    G.pool_week=0;
+    G.week_bonus_given=false;
+    // Reset weekly task statuses
+    const weeklyIds=TASKS.filter(t=>t.task_type==='weekly').map(t=>t.id);
+    if(weeklyIds.length>0){
+      await sb.from('tasks').update({status:'pending',defer_penalty:false}).in('id',weeklyIds);
+      TASKS=TASKS.map(t=>weeklyIds.includes(t.id)?{...t,status:'pending',defer_penalty:false}:t);
+    }
+    G.last_week_date=thisWeekStart;
+  }
+
+  if(!G.last_day_date||G.last_day_date!==today){G.last_day_date=today;}
+  if(!G.last_week_date){G.last_week_date=thisWeekStart;}
+  await save();
+}
+
+// ── TASK HELPERS ──────────────────────────────────────────────
+function getDailyTasks(){return TASKS.filter(t=>t.task_type==='daily');}
+function getWeekTasks(){return TASKS.filter(t=>t.task_type==='weekly');}
+function getQtrTasks(){return TASKS.filter(t=>t.task_type==='quarterly');}
+
+// ── EARN ──────────────────────────────────────────────────────
+async function earn(xp,gel,stat,name,type='task'){
+  G.total_xp+=xp;
+  G.gel_earned=r2(G.gel_earned+gel);
+  G.gel_balance=r2(G.gel_balance+gel);
+  G.pool_day=r2(G.pool_day+gel);
+  G.pool_week=r2(G.pool_week+gel);
+  G.pool_qtr=r2(G.pool_qtr+gel);
+
+  // Stat bump: accumulate XP toward stat increase
+  const xpCost=G.stat_str<30?50:G.total_xp<100?50:G[`stat_${stat}`]<60?100:200;
+  if(xp>=xpCost&&G[`stat_${stat}`]<100){
+    const prevSum=statSum();
+    G[`stat_${stat}`]=Math.min(100,G[`stat_${stat}`]+1);
+    const newSum=statSum();
+    const prevLvl=getLevel(prevSum);
+    const newLvl=getLevel(newSum);
+    if(newLvl.n>prevLvl.n){showLevelUp(newLvl);}
+  }
+
+  // Log event
+  const logEntry={profile_id:PROFILE.id,task_name:name||'',xp,gel:r2(gel),event_type:type};
+  await sb.from('event_log').insert(logEntry);
+  LOGS.unshift({...logEntry,created_at:new Date().toISOString()});
+  if(LOGS.length>30)LOGS.pop();
+}
+
+function statSum(){
+  return G.stat_str+G.stat_int+G.stat_gld+G.stat_vit+G.stat_dex+G.stat_cha;
+}
+
+// ── CHECK DAY BONUS ───────────────────────────────────────────
+async function checkDayBonus(){
+  if(G.day_bonus_given)return;
+  const p12=getDailyTasks().filter(t=>(t.priority==='p1'||t.priority==='p2')&&t.status!=='archived'&&t.status!=='deferred');
+  if(p12.length>0&&p12.every(t=>t.status==='done')){
+    G.day_bonus_given=true;
+    await earn(0,DAY_BONUS,'gld','Дневной бонус P1+P2','bonus_day');
+    document.getElementById('day-bonus').style.display='block';
+    toast('🎉 Дневной бонус +'+DAY_BONUS+'₾!');
+  }
+}
+
+// ── CHECK WEEK BONUS ──────────────────────────────────────────
+async function checkWeekBonus(){
+  if(G.week_bonus_given)return;
+  // Week bonus: earned in pool_week should include enough days' bonuses
+  // Simplified check: if pool_week >= 5 * DAY_BONUS (5 weekdays worth)
+  // Full check would require daily completion log — simplified for beta
+  if(G.pool_week>=5*DAY_BONUS){
+    G.week_bonus_given=true;
+    await earn(0,WEEK_BONUS,'gld','Недельный бонус P1+P2','bonus_week');
+    document.getElementById('week-bonus-banner').style.display='block';
+    toast('🎉 Недельный бонус +'+WEEK_BONUS+'₾!');
+  }
+}
+
+// ── COMPLETE TASK ─────────────────────────────────────────────
+async function doneTask(taskId){
+  const t=TASKS.find(x=>x.id===taskId);
+  if(!t||t.status==='done')return;
+  const xp=cXP(t.xp_base,t.priority,t.defer_penalty);
+  const gel=cGEL(t.gel_base,t.defer_penalty);
+  t.status='done';t.completed_at=new Date().toISOString();
+
+  // Update in DB
+  await sb.from('tasks').update({status:'done',completed_at:t.completed_at}).eq('id',taskId);
+  await earn(xp,gel,t.stat,t.name);
+  await checkDayBonus();
+  await checkWeekBonus();
+  await save();
+  renderAll();
+  toast('+'+xp+'XP +'+gel.toFixed(1)+'₾'+(t.defer_penalty?' ⚠штраф':''));
+}
+
+// ── DEFER ─────────────────────────────────────────────────────
+let DT=null;
+function openDefer(id){
+  const t=TASKS.find(x=>x.id===id);if(!t||t.status==='done'||t.status==='deferred')return;
+  DT={id,hasPen:DP[t.priority]};
+  document.getElementById('defer-opts').innerHTML=WK.map(k=>`
+    <div class="defer-opt" onclick="deferToDay('${k}')">
+      <span>${WN[k]}</span>
+      ${DT.hasPen?'<span style="font-size:10px;color:var(--rtext)">×0.5 XP</span>':''}
+    </div>`).join('');
+  openM('defer-modal');
+}
+async function deferToDay(dayKey){
+  if(!DT)return;
+  const t=TASKS.find(x=>x.id===DT.id);if(!t)return;
+  // Mark original as deferred
+  t.status='deferred';
+  await sb.from('tasks').update({status:'deferred'}).eq('id',t.id);
+  // Create deferred copy as weekly task for that day
+  const copy={
+    id:uid(),profile_id:PROFILE.id,
+    name:t.name,xp_base:t.xp_base,gel_base:t.gel_base,
+    stat:t.stat,priority:t.priority,section:t.section,
+    task_type:'weekly',week_day:dayKey,quarter:null,
+    time_hint:t.time_hint,status:'pending',
+    defer_penalty:DT.hasPen,is_recurring:false
+  };
+  await sb.from('tasks').insert(copy);
+  TASKS.push(copy);
+  closeM('defer-modal');
+  await save();renderAll();
+  toast('Перенесено'+(DT.hasPen?' — ×0.5 XP':''));
+}
+async function deferCustom(){
+  const d=document.getElementById('d-date').value;
+  const tm=document.getElementById('d-time').value;
+  if(!d||!DT)return;
+  const t=TASKS.find(x=>x.id===DT.id);if(!t)return;
+  t.status='deferred';
+  await sb.from('tasks').update({status:'deferred'}).eq('id',t.id);
+  const copy={
+    id:uid(),profile_id:PROFILE.id,
+    name:t.name,xp_base:t.xp_base,gel_base:t.gel_base,
+    stat:t.stat,priority:t.priority,section:t.section,
+    task_type:'weekly',week_day:'custom_'+d,quarter:null,
+    time_hint:tm||t.time_hint,status:'pending',
+    defer_penalty:DT.hasPen,is_recurring:false
+  };
+  await sb.from('tasks').insert(copy);
+  TASKS.push(copy);
+  closeM('defer-modal');
+  await save();renderAll();toast('Перенесено на '+d);
+}
+
+// ── MOVE ──────────────────────────────────────────────────────
+let MT=null;
+function openMove(id){
+  const t=TASKS.find(x=>x.id===id);if(!t||t.section==='base')return;
+  MT=id;openM('move-modal');
+}
+async function confirmMove(ns){
+  if(!MT)return;
+  const t=TASKS.find(x=>x.id===MT);if(!t)return;
+  t.section=ns;
+  await sb.from('tasks').update({section:ns}).eq('id',MT);
+  closeM('move-modal');await save();renderAll();
+  toast('Перемещено в '+(ns==='work'?'Рабочие':'Личные'));
+}
+
+// ── DELETE / ARCHIVE ──────────────────────────────────────────
+let DelT=null;
+function openDel(id){
+  DelT=id;
+  const t=TASKS.find(x=>x.id===id);if(!t)return;
+  document.getElementById('del-name').textContent=t.name;
+  document.getElementById('del-reason').value='';
+  openM('del-modal');
+}
+async function confirmDel(){
+  const reason=document.getElementById('del-reason').value.trim();
+  if(!reason){toast('Укажи причину');return;}
+  const t=TASKS.find(x=>x.id===DelT);if(!t)return;
+  t.status='archived';t.archive_reason=reason;
+  await sb.from('tasks').update({status:'archived',archive_reason:reason}).eq('id',DelT);
+  TASKS=TASKS.filter(x=>x.id!==DelT);
+  closeM('del-modal');await save();renderAll();toast('Удалено в архив');
+}
+async function restoreTask(id){
+  const{data:t}=await sb.from('tasks').select('*').eq('id',id).single();if(!t)return;
+  await sb.from('tasks').update({status:'pending',archive_reason:null}).eq('id',id);
+  t.status='pending';t.archive_reason=null;
+  TASKS.push(t);
+  await save();renderAll();toast('Восстановлено');
+}
+
+// ── EDIT TASK ─────────────────────────────────────────────────
+let EditT=null;
+function openEditTask(id){
+  const t=TASKS.find(x=>x.id===id);if(!t)return;
+  EditT=id;
+  document.getElementById('et-name').value=t.name;
+  document.getElementById('et-sec').value=t.section;
+  document.getElementById('et-pri').value=t.priority;
+  document.getElementById('et-stat').value=t.stat;
+  document.getElementById('et-time').value=t.time_hint||'';
+  document.getElementById('et-xp').value=t.xp_base;
+  document.getElementById('et-gel').value=t.gel_base;
+  openM('edit-task-modal');
+}
+async function saveEditTask(){
+  const t=TASKS.find(x=>x.id===EditT);if(!t)return;
+  const updates={
+    name:document.getElementById('et-name').value.trim()||t.name,
+    section:document.getElementById('et-sec').value,
+    priority:document.getElementById('et-pri').value,
+    stat:document.getElementById('et-stat').value,
+    time_hint:document.getElementById('et-time').value,
+    xp_base:parseInt(document.getElementById('et-xp').value)||t.xp_base,
+    gel_base:parseFloat(document.getElementById('et-gel').value)||t.gel_base,
+  };
+  Object.assign(t,updates);
+  await sb.from('tasks').update(updates).eq('id',EditT);
+  closeM('edit-task-modal');await save();renderAll();toast('Задача обновлена');
+}
+
+// ── ADD TASK ──────────────────────────────────────────────────
+document.getElementById('ai-type').addEventListener('change',function(){
+  document.getElementById('ai-weekday-wrap').style.display=this.value==='weekly'?'block':'none';
+});
+
+async function addTask(){
+  const name=document.getElementById('ai-name').value.trim();if(!name)return;
+  const sec=document.getElementById('ai-sec').value;
+  const pri=document.getElementById('ai-pri').value;
+  const stat=document.getElementById('ai-stat').value;
+  const tm=document.getElementById('ai-time').value;
+  const type=document.getElementById('ai-type').value;
+  const weekday=type==='weekly'?document.getElementById('ai-weekday').value:null;
+  const xp=parseInt(document.getElementById('ai-xp').value)||20;
+  const gel=parseFloat(document.getElementById('ai-gel').value)||PG_DEFAULT[pri];
+  const isRecurring=type==='daily_recurring';
+  const taskType=type==='weekly'?'weekly':type==='daily_recurring'?'daily':'daily';
+
+  const t={id:uid(),profile_id:PROFILE.id,name,xp_base:xp,gel_base:gel,stat,priority:pri,
+    section:sec,task_type:taskType,week_day:weekday,quarter:null,time_hint:tm,
+    status:'pending',defer_penalty:false,is_recurring:isRecurring};
+  await sb.from('tasks').insert(t);
+  TASKS.push(t);
+  document.getElementById('ai-name').value='';
+  document.getElementById('ai-time').value='';
+  document.getElementById('ai-xp').value='20';
+  document.getElementById('ai-gel').value='';
+  await save();renderAll();toast('Добавлено в '+(sec==='work'?'Рабочие':sec==='base'?'Базовые':'Личные'));
+}
+
+async function addWeekTask(){
+  const name=document.getElementById('wi-name').value.trim();if(!name)return;
+  const t={id:uid(),profile_id:PROFILE.id,name,
+    xp_base:20,gel_base:PG_DEFAULT[document.getElementById('wi-pri').value],
+    stat:document.getElementById('wi-stat').value,
+    priority:document.getElementById('wi-pri').value,
+    section:document.getElementById('wi-sec').value,
+    task_type:'weekly',week_day:document.getElementById('wi-day').value,
+    quarter:null,time_hint:document.getElementById('wi-time').value||'',
+    status:'pending',defer_penalty:false,is_recurring:true};
+  await sb.from('tasks').insert(t);TASKS.push(t);
+  document.getElementById('wi-name').value='';
+  await save();renderAll();toast('Недельная задача добавлена');
+}
+
+async function addQuarterTask(){
+  const name=document.getElementById('qi-name').value.trim();if(!name)return;
+  const pri=document.getElementById('qi-pri').value;
+  const t={id:uid(),profile_id:PROFILE.id,name,
+    xp_base:50,gel_base:PG_DEFAULT[pri]*3,
+    stat:document.getElementById('qi-stat').value,priority:pri,
+    section:document.getElementById('qi-sec').value,
+    task_type:'quarterly',week_day:null,
+    quarter:document.getElementById('qi-quarter').value,
+    time_hint:'',status:'pending',defer_penalty:false,is_recurring:false};
+  await sb.from('tasks').insert(t);TASKS.push(t);
+  document.getElementById('qi-name').value='';
+  await save();renderAll();toast('Квартальный квест добавлен');
+}
+
+// ── REWARDS ───────────────────────────────────────────────────
+let EditReward=null;
+function openEditReward(id){
+  const r=REWARDS.find(x=>x.id===id);if(!r)return;
+  EditReward=id;
+  document.getElementById('reward-modal-title').textContent='Редактировать награду';
+  document.getElementById('rw-name').value=r.name;
+  document.getElementById('rw-cost').value=r.gel_cost;
+  document.getElementById('rw-period').value=r.period;
+  document.getElementById('del-reward-btn').style.display='block';
+  openM('add-reward-modal');
+}
+async function saveReward(){
+  const name=document.getElementById('rw-name').value.trim();if(!name)return;
+  const cost=parseFloat(document.getElementById('rw-cost').value);if(!cost)return;
+  const period=document.getElementById('rw-period').value;
+  if(EditReward){
+    await sb.from('rewards').update({name,gel_cost:cost,period}).eq('id',EditReward);
+    const r=REWARDS.find(x=>x.id===EditReward);if(r){r.name=name;r.gel_cost=cost;r.period=period;}
+  }else{
+    const r={id:uid(),profile_id:PROFILE.id,name,gel_cost:cost,period,is_active:true};
+    await sb.from('rewards').insert(r);REWARDS.push(r);
+  }
+  EditReward=null;
+  document.getElementById('reward-modal-title').textContent='Новая награда';
+  document.getElementById('del-reward-btn').style.display='none';
+  closeM('add-reward-modal');await save();renderAll();toast('Награда сохранена');
+}
+async function deleteReward(){
+  if(!EditReward)return;
+  if(!confirm('Удалить эту награду?'))return;
+  await sb.from('rewards').update({is_active:false}).eq('id',EditReward);
+  REWARDS=REWARDS.filter(x=>x.id!==EditReward);
+  EditReward=null;closeM('add-reward-modal');await save();renderAll();toast('Награда удалена');
+}
+async function redeemReward(id){
+  const r=REWARDS.find(x=>x.id===id);if(!r)return;
+  if(G.gel_balance<r.gel_cost){toast('Недостаточно ₾ на балансе');return;}
+  if(!confirm('Получить награду «'+r.name+'» за '+r.gel_cost+'₾?'))return;
+  G.gel_balance=r2(G.gel_balance-r.gel_cost);
+  const spentEntry={profile_id:PROFILE.id,reward_name:r.name,gel_cost:r.gel_cost};
+  await sb.from('spent_log').insert(spentEntry);
+  SPENT.unshift({...spentEntry,created_at:new Date().toISOString()});
+  // Log as redeem event
+  await sb.from('event_log').insert({profile_id:PROFILE.id,task_name:r.name,xp:0,gel:-r.gel_cost,event_type:'redeem'});
+  await save();renderAll();toast('🎁 Награда: '+r.name);
+}
+
+// ── MANUAL BALANCE ADJUSTMENT ─────────────────────────────────
+async function manualBalanceAdj(dir){
+  const val=parseFloat(document.getElementById('bal-adj').value);
+  if(!val||val<=0){toast('Введи сумму');return;}
+  const adj=r2(val*dir);
+  G.gel_balance=r2(G.gel_balance+adj);
+  if(adj>0)G.gel_earned=r2(G.gel_earned+adj);
+  const reason=dir>0?'Ручное пополнение':'Ручное списание';
+  await sb.from('event_log').insert({profile_id:PROFILE.id,task_name:reason,xp:0,gel:adj,event_type:dir>0?'bonus_day':'redeem'});
+  document.getElementById('bal-adj').value='';
+  await save();renderAll();toast((dir>0?'+':'')+adj.toFixed(1)+'₾');
+}
+
+// ── CHECK-IN ──────────────────────────────────────────────────
+let selectedMood=0;
+function setMood(n){
+  selectedMood=n;
+  [1,2,3,4].forEach(i=>document.getElementById('mood-'+i).classList.toggle('sel',i===n));
+}
+async function saveCheckin(){
+  const note=document.getElementById('day-note').value.trim();
+  const tomorrow=document.getElementById('tomorrow-task').value.trim();
+  if(!selectedMood){toast('Выбери настроение дня');return;}
+  const doneTasks=getDailyTasks().filter(t=>t.status==='done').length;
+  const entry={
+    profile_id:PROFILE.id,
+    date:todayShort(),mood:selectedMood,
+    mood_emoji:['','😴','😐','🙂','🔥'][selectedMood],
+    note,tomorrow_task:tomorrow,
+    earned_gel:G.pool_day,tasks_done:doneTasks
+  };
+  await sb.from('checkins').insert(entry);
+  CHECKINS.unshift({...entry,created_at:new Date().toISOString()});
+  if(CHECKINS.length>14)CHECKINS.pop();
+  if(tomorrow)G.tomorrow_task=tomorrow;
+  selectedMood=0;
+  document.getElementById('day-note').value='';
+  document.getElementById('tomorrow-task').value='';
+  [1,2,3,4].forEach(i=>document.getElementById('mood-'+i).classList.remove('sel'));
+  document.getElementById('checkin-card').style.display='none';
+  await save();renderAll();toast('Чекин сохранён! До завтра 👊');
+}
+
+// ── GOALS ─────────────────────────────────────────────────────
+async function updateWeight(){
+  const v=parseFloat(document.getElementById('weight-inp').value);
+  if(!v||v<30||v>300){toast('Введи реальный вес');return;}
+  G.goal_weight=v;await save();renderAll();toast('Вес обновлён: '+v+' кг');
+}
+async function updateSalary(){
+  const v=parseFloat(document.getElementById('salary-inp').value);
+  if(!v||v<0){toast('Введи зарплату');return;}
+  G.goal_salary=v;await save();renderAll();toast('Зарплата обновлена: '+v+'€');
+}
+
+// ── RESET DAY MANUALLY ────────────────────────────────────────
+async function resetDay(){
+  if(!confirm('Начать новый день? Отметки ежедневных задач сбросятся, GEL и XP сохранятся.'))return;
+  const dailyIds=TASKS.filter(t=>t.task_type==='daily').map(t=>t.id);
+  if(dailyIds.length>0){
+    await sb.from('tasks').update({status:'pending',defer_penalty:false}).in('id',dailyIds);
+    TASKS=TASKS.map(t=>dailyIds.includes(t.id)?{...t,status:'pending',defer_penalty:false}:t);
+  }
+  G.day_bonus_given=false;G.pool_day=0;
+  G.last_day_date=todayKey();
+  document.getElementById('day-bonus').style.display='none';
+  await save();renderAll();toast('Новый день начат! 🌅');
+}
+
+// ── LEVEL UP ─────────────────────────────────────────────────
+function showLevelUp(lvl){
+  document.getElementById('lu-emoji').textContent=lvl.emoji;
+  document.getElementById('lu-name').textContent=lvl.name;
+  document.getElementById('lu-sub').textContent='Уровень '+lvl.n+' из 10';
+  document.getElementById('levelup-overlay').classList.add('show');
+}
+function closeLevelUp(){
+  document.getElementById('levelup-overlay').classList.remove('show');
+}
+
+// ── RENDER ─────────────────────────────────────────────────────
+function renderTopBar(){
+  const sum=statSum();
+  const lvl=getLevel(sum);
+  const nextLvl=LEVELS[Math.min(lvl.n,9)];
+  const avatar=PROFILE?.avatar_emoji||'⚔️';
+  const name=PROFILE?.name||'Player';
+  document.getElementById('char-name').textContent=avatar+' '+name;
+  document.getElementById('top-date').textContent=todayStr();
+  document.getElementById('lvl-badge').textContent='Уровень '+lvl.n+' · '+lvl.name;
+  const pct=lvl.n===10?100:Math.min(100,Math.round(((sum-lvl.min)/(nextLvl.min-lvl.min))*100));
+  document.getElementById('xp-fill').style.width=pct+'%';
+  document.getElementById('xp-pct').textContent=pct+'%';
+  document.getElementById('xp-lvl-lbl').textContent=lvl.n<10?'До: '+nextLvl.name:'МАКСИМУМ 👑';
+  const sg=document.getElementById('s-sum');if(sg)sg.textContent=Math.round(sum);
+  const sl=document.getElementById('s-lvl');if(sl)sl.textContent=lvl.name;
+  const sx=document.getElementById('s-xp');if(sx)sx.textContent=G.total_xp;
+  const sg2=document.getElementById('s-gel');if(sg2)sg2.textContent=r2(G.gel_earned).toFixed(1);
+}
+
+function renderStreak(){
+  document.getElementById('streak-val').textContent=G.streak||0;
+  const today=new Date();const dow=today.getDay();
+  const dots=document.getElementById('streak-dots');
+  const days=['П','В','С','Ч','П','С','В'];
+  dots.innerHTML=days.map((d,i)=>{
+    const isToday=i===(dow===0?6:dow-1);
+    const isPast=i<(dow===0?6:dow-1);
+    return`<div class="sd${isPast?' done':isToday?' today':''}">${d}</div>`;
+  }).join('');
+}
+
+function renderGelBalance(){
+  const b=r2(G.gel_balance||0);const e=r2(G.gel_earned||0);
+  const pd=r2(G.pool_day||0);const pw=r2(G.pool_week||0);
+  document.getElementById('gel-balance').textContent=b.toFixed(1);
+  document.getElementById('gel-earned').textContent=e.toFixed(1);
+  document.getElementById('pool-day').textContent=pd.toFixed(1);
+  document.getElementById('pool-week').textContent=pw.toFixed(1);
+  // Day max
+  const dm=r2(getDailyTasks().reduce((s,t)=>s+t.gel_base,0)+DAY_BONUS);
+  document.getElementById('pool-day-max').textContent=dm.toFixed(1);
+  // Balance display in More tab
+  const bd=document.getElementById('bal-display');if(bd)bd.textContent=b.toFixed(1);
+  const ed=document.getElementById('earned-display');if(ed)ed.textContent=e.toFixed(1);
+  // ET
+  const et=document.getElementById('et');if(et)et.textContent=pd.toFixed(1);
+}
+
+function renderGoals(){
+  const w=G.goal_weight||120;const wTarget=100;
+  const wProg=Math.max(0,Math.min(100,Math.round(((120-w)/(120-wTarget))*100)));
+  document.getElementById('g-weight').textContent=w+' кг';
+  document.getElementById('g-weight-bar').style.width=wProg+'%';
+  const s=G.goal_salary||2300;const sTarget=4600;
+  const sProg=Math.min(100,Math.round((s/sTarget)*100));
+  document.getElementById('g-salary').textContent=s+'€';
+  document.getElementById('g-salary-bar').style.width=sProg+'%';
+}
+
+function taskHTML(t){
+  const xp=cXP(t.xp_base,t.priority,t.defer_penalty);
+  const gel=cGEL(t.gel_base,t.defer_penalty);
+  const cls=t.section==='work'?'work-t':t.section==='personal'?'personal-t':'base-t';
+  const done=t.status==='done';const def=t.status==='deferred';
+  return`<div class="qi ${cls}${done?' done-item':''}">
+    <div class="chk${done?' done':''}" onclick="doneTask('${t.id}')"></div>
+    <div class="qi-info">
+      <div class="qi-name${done?' done':''}${def?' done':''}">${t.name}${def?' (перенесена)':''}</div>
+      ${t.time_hint?`<div class="qi-time">${t.time_hint}</div>`:''}
+      <div class="qi-meta">+${xp}XP · ${t.stat.toUpperCase()} · ${SL[t.stat]}</div>
+      <div class="qi-gel">+${gel.toFixed(1)}₾${t.defer_penalty?' (штраф ×0.5)':''}</div>
+      ${!done&&!def?`<div class="qi-acts">
+        <button class="qa p" onclick="openEditTask('${t.id}')">✏️ Изм.</button>
+        <button class="qa b" onclick="openDefer('${t.id}')">→ Перенести</button>
+        ${t.section!=='base'?`<button class="qa g" onclick="openMove('${t.id}')">⇄</button>`:''}
+        <button class="qa r" onclick="openDel('${t.id}')">✕</button>
+      </div>`:''}
+    </div>
+    <span class="pb ${t.priority}">${PL[t.priority]}</span>
+  </div>`;
+}
+
+function renderToday(){
+  const daily=getDailyTasks().filter(t=>t.status!=='archived');
+  const wt=sortP(daily.filter(t=>t.section==='work'&&t.status!=='deferred'));
+  const pt=sortP(daily.filter(t=>t.section==='personal'&&t.status!=='deferred'));
+  const bt=sortP(daily.filter(t=>t.section==='base'));
+  const wDone=wt.filter(t=>t.status==='done').length;
+  const pDone=pt.filter(t=>t.status==='done').length;
+  const bDone=bt.filter(t=>t.status==='done').length;
+  const allDone=wDone+pDone+bDone;const allTotal=wt.length+pt.length+bt.length;
+  const dc=document.getElementById('dc');if(dc)dc.textContent=allDone;
+  const dtc=document.getElementById('dtc');if(dtc)dtc.textContent=allTotal;
+  document.getElementById('wc').textContent=wDone+'/'+wt.length;
+  document.getElementById('pc').textContent=pDone+'/'+pt.length;
+  document.getElementById('bc').textContent=bDone+'/'+bt.length;
+  document.getElementById('wg').textContent='до +'+r2(wt.reduce((s,t)=>s+t.gel_base,0)).toFixed(1)+'₾';
+  document.getElementById('pg').textContent='до +'+r2(pt.reduce((s,t)=>s+t.gel_base,0)).toFixed(1)+'₾';
+  document.getElementById('bg').textContent='до +'+r2(bt.reduce((s,t)=>s+t.gel_base,0)).toFixed(1)+'₾';
+  document.getElementById('work-list').innerHTML=wt.map(taskHTML).join('')||'<div style="font-size:12px;color:var(--text2);padding:6px 0">Нет рабочих задач</div>';
+  document.getElementById('personal-list').innerHTML=pt.map(taskHTML).join('')||'<div style="font-size:12px;color:var(--text2);padding:6px 0">Нет личных задач</div>';
+  document.getElementById('base-list').innerHTML=bt.map(taskHTML).join('');
+  if(G.day_bonus_given)document.getElementById('day-bonus').style.display='block';
+  const hour=new Date().getHours();
+  const checkinCard=document.getElementById('checkin-card');
+  const todayCheckin=CHECKINS[0]&&CHECKINS[0].date===todayShort();
+  if(checkinCard)checkinCard.style.display=(hour>=20&&!todayCheckin)?'block':'none';
+}
+
+function renderWeek(){
+  const today=new Date();const dow=today.getDay();
+  const ws=new Date(today);ws.setDate(today.getDate()+(dow===0?-6:1-dow));
+  const we=new Date(ws);we.setDate(ws.getDate()+6);
+  const wl=document.getElementById('week-lbl');
+  if(wl)wl.textContent=ws.toLocaleDateString('ru',{day:'numeric',month:'short'})+' — '+we.toLocaleDateString('ru',{day:'numeric',month:'short'});
+  const el=document.getElementById('week-list');if(!el)return;
+  const weekTasks=getWeekTasks().filter(t=>t.status!=='archived');
+  let html='';
+  const allKeys=[...WK,...[...new Set(weekTasks.map(t=>t.week_day).filter(k=>k&&!WK.includes(k)))]];
+  allKeys.forEach(k=>{
+    if(!k)return;
+    const tasks=sortP(weekTasks.filter(t=>t.week_day===k));
+    if(!tasks.length)return;
+    const label=WN[k]||(k.startsWith('custom_')?k.replace('custom_',''):k);
+    const done=tasks.filter(t=>t.status==='done').length;
+    const gel=r2(tasks.reduce((s,t)=>s+t.gel_base,0));
+    html+=`<div class="day-hdr"><span>${label}</span><span class="day-gel-lbl">${done}/${tasks.length} · до +${gel.toFixed(1)}₾</span></div>`;
+    const wt=sortP(tasks.filter(t=>t.section==='work'));
+    const pt=sortP(tasks.filter(t=>t.section!=='work'));
+    if(wt.length){html+=`<div class="sec-sub work">💼 Рабочие</div>`;html+=wt.map(taskHTML).join('');}
+    if(pt.length){html+=`<div class="sec-sub personal">🌿 Личные</div>`;html+=pt.map(taskHTML).join('');}
+  });
+  el.innerHTML=html||'<div style="font-size:12px;color:var(--text2);padding:8px 0">Нет задач на эту неделю</div>';
+  if(G.week_bonus_given)document.getElementById('week-bonus-banner').style.display='block';
+}
+
+function renderQuarter(){
+  const el=document.getElementById('quarter-content');if(!el)return;
+  const qts=getQtrTasks().filter(t=>t.status!=='archived');
+  const quarters=[...new Set(qts.map(t=>t.quarter))].sort();
+  let html='';
+  quarters.forEach(q=>{
+    const tasks=sortP(qts.filter(t=>t.quarter===q));
+    const p12=tasks.filter(t=>t.priority==='p1'||t.priority==='p2');
+    const allP12Done=p12.length>0&&p12.every(t=>t.status==='done');
+    const done=tasks.filter(t=>t.status==='done').length;
+    const gel=r2(tasks.reduce((s,t)=>s+t.gel_base,0));
+    html+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span class="q-period">${q}</span>
+      <span class="q-chip">${done}/${tasks.length}</span>
+      <span class="q-chip" style="color:var(--gtext)">₾${gel.toFixed(0)}</span>
+    </div>`;
+    if(allP12Done)html+=`<div class="q-bonus-banner"><div class="q-bonus-t">🎉 +${QTR_BONUS}₾ бонус разблокирован!</div><div class="q-bonus-d">Все P1+P2 квесты квартала закрыты.</div></div>`;
+    html+=tasks.map(taskHTML).join('');
+    html+=`<div class="divider"></div>`;
+  });
+  el.innerHTML=html||'<div style="font-size:12px;color:var(--text2)">Нет квестов</div>';
+}
+
+function renderStats(){
+  const el=document.getElementById('stats-grid');if(!el)return;
+  const stats=[
+    {k:'str',v:G.stat_str},{k:'int',v:G.stat_int},{k:'gld',v:G.stat_gld},
+    {k:'vit',v:G.stat_vit},{k:'dex',v:G.stat_dex},{k:'cha',v:G.stat_cha}
+  ];
+  el.innerHTML=stats.map(({k,v})=>`
+    <div class="stat-card">
+      <div class="s-ico" style="color:${SC[k]}">${k.toUpperCase()}</div>
+      <div class="s-lbl">${SL[k]}</div>
+      <div class="s-val">${Math.round(v)}</div>
+      <div class="s-bar-bg"><div class="s-bar-fill" style="width:${v}%;background:${SC[k]}"></div></div>
+    </div>`).join('');
+  const WLB=[
+    {label:'Работа',stats:['stat_gld','stat_dex'],color:'#378ADD'},
+    {label:'Здоровье',stats:['stat_str','stat_vit'],color:'#1D9E75'},
+    {label:'Развитие',stats:['stat_int'],color:'#7F77DD'},
+    {label:'Жизнь',stats:['stat_cha'],color:'#D4537E'}
+  ];
+  const tot=WLB.reduce((s,z)=>s+z.stats.reduce((a,k)=>a+(G[k]||0),0),0)||1;
+  const wg=document.getElementById('wlb-grid');
+  if(wg)wg.innerHTML=WLB.map(z=>{
+    const zv=z.stats.reduce((a,k)=>a+(G[k]||0),0);const p=Math.round((zv/tot)*100);
+    return`<div class="wlb-card"><div class="wlb-title">${z.label}</div><div class="wlb-val">${p}%</div><div class="wlb-bar-bg"><div class="wlb-bar-fill" style="width:${p}%;background:${z.color}"></div></div></div>`;
+  }).join('');
+  const ch=document.getElementById('checkin-history');
+  if(ch)ch.innerHTML=CHECKINS.length?CHECKINS.slice(0,7).map(c=>`
+    <div class="log-item"><span>${c.date} · ${c.mood_emoji} · ${c.tasks_done} задач</span><span class="log-pos">+${r2(c.earned_gel).toFixed(1)}₾</span></div>`).join('')
+    :'<div style="font-size:12px;color:var(--text2)">Чекинов пока нет</div>';
+  const ll=document.getElementById('log-list');
+  if(ll)ll.innerHTML=LOGS.length
+    ?LOGS.slice(0,20).map(l=>`<div class="log-item"><span>${new Date(l.created_at).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})} · ${(l.task_name||'').slice(0,28)}</span><span class="${l.gel>=0?'log-pos':'log-neg'}">${l.xp?'+'+l.xp+'XP ':''} ${l.gel>=0?'+':''}${r2(l.gel).toFixed(1)}₾</span></div>`).join('')
+    :'<div style="font-size:12px;color:var(--text2)">Пока пусто</div>';
+}
+
+function renderMore(){
+  const el=document.getElementById('rewards-list');if(!el)return;
+  const bal=G.gel_balance||0;
+  const sorted=[...REWARDS].sort((a,b)=>a.gel_cost-b.gel_cost);
+  el.innerHTML=sorted.map(r=>{
+    const can=bal>=r.gel_cost;
+    const periodLabel={day:'Дневная',week:'Недельная',quarter:'Квартальная',any:'Любая'}[r.period]||'';
+    return`<div class="reward-card${can?' unlocked':''}">
+      <div>
+        <div class="rc-name">${r.name}</div>
+        <div class="rc-sub">${r.gel_cost}₾ · ${periodLabel}</div>
+      </div>
+      <div style="display:flex;gap:4px;align-items:center">
+        <button class="rc-edit" onclick="openEditReward('${r.id}')">✏️</button>
+        <button class="rc-btn${can?' ready':''}" onclick="redeemReward('${r.id}')" ${can?'':'disabled'}>${can?'🎁 Получить':r.gel_cost+'₾'}</button>
+      </div>
+    </div>`;
+  }).join('')||'<div style="font-size:12px;color:var(--text2)">Нет наград</div>';
+
+  const sp=document.getElementById('spent-list');
+  if(sp)sp.innerHTML=SPENT.length
+    ?SPENT.map(s=>`<div class="log-item"><span>${new Date(s.created_at).toLocaleDateString('ru',{day:'numeric',month:'short'})} · ${s.reward_name}</span><span class="log-neg">−${r2(s.gel_cost).toFixed(1)}₾</span></div>`).join('')
+    :'<div style="font-size:12px;color:var(--text2)">Пока не потрачено</div>';
+
+  // Archive
+  const archived=TASKS.filter(t=>t.status==='archived')||[];
+  const ac=document.getElementById('arch-cnt');if(ac)ac.textContent=archived.length;
+  // Load archived from DB
+  sb.from('tasks').select('*').eq('profile_id',PROFILE?.id).eq('status','archived').then(({data})=>{
+    const al=document.getElementById('arch-list');
+    if(!al)return;
+    const arch=data||[];
+    al.innerHTML=arch.length
+      ?arch.map(t=>`<div class="arch-item">
+          <div class="arch-name">${t.name}</div>
+          <div class="arch-reason">Причина: ${t.archive_reason} · ${new Date(t.created_at).toLocaleDateString('ru')}</div>
+          <button class="arch-btn" onclick="restoreTask('${t.id}')">Восстановить</button>
+        </div>`).join('')
+      :'<div style="font-size:12px;color:var(--text2)">Архив пуст</div>';
+  });
+}
+
+function renderAll(){
+  if(!G||!PROFILE)return;
+  renderTopBar();renderStreak();renderGelBalance();renderGoals();
+  renderToday();renderWeek();renderQuarter();renderStats();renderMore();
+}
+
+// ── TABS ──────────────────────────────────────────────────────
+function switchTab(t){
+  const tabs=['today','week','quarter','stats','more'];
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',tabs[i]===t));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+t).classList.add('active');
+}
+
+// ── MODALS ────────────────────────────────────────────────────
+function openM(id){document.getElementById(id).classList.add('open');}
+function closeM(id){
+  document.getElementById(id).classList.remove('open');
+  EditT=null;EditReward=null;
+}
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+
+// ── TOAST ─────────────────────────────────────────────────────
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+// ── ONBOARDING ────────────────────────────────────────────────
+let onboardStep=0;
+const ONBOARD_STEPS=4;
+let selectedAvatarEmoji='⚔️';
+
+function updateOnboardDots(){
+  document.getElementById('onboard-dots').innerHTML=Array.from({length:ONBOARD_STEPS},(_,i)=>`<div class="onboard-dot${i===onboardStep?' active':''}"></div>`).join('');
+}
+function selectAvatar(el){
+  document.querySelectorAll('.emoji-opt').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+  selectedAvatarEmoji=el.textContent;
+}
+async function nextOnboard(){
+  if(onboardStep===1){
+    const name=document.getElementById('onboard-name').value.trim();
+    if(!name){toast('Введи имя');return;}
+    // Save name to profile
+    await sb.from('profiles').update({name}).eq('id',PROFILE.id);
+    PROFILE.name=name;
+  }
+  if(onboardStep===2){
+    await sb.from('profiles').update({avatar_emoji:selectedAvatarEmoji}).eq('id',PROFILE.id);
+    PROFILE.avatar_emoji=selectedAvatarEmoji;
+  }
+  document.getElementById('onboard-s'+onboardStep).classList.remove('active');
+  onboardStep++;
+  if(onboardStep>=ONBOARD_STEPS){finishOnboard();return;}
+  document.getElementById('onboard-s'+onboardStep).classList.add('active');
+  updateOnboardDots();
+}
+async function finishOnboard(){
+  localStorage.setItem('onboard_done_'+PROFILE.id,'1');
+  showOnboarding(false);
+  // Create user state if not exists
+  await refreshAllData();
+  checkNewDay();
+  showApp(true);
+  renderAll();
+}
+
+// ── SCREEN MANAGEMENT ─────────────────────────────────────────
+function showLoading(v){document.getElementById('loading-screen').style.display=v?'flex':'none';}
+function showAuth(v){document.getElementById('auth-screen').style.display=v?'flex':'none';}
+function showApp(v){document.getElementById('main-app').style.display=v?'block':'none';}
+function showOnboarding(v){
+  const el=document.getElementById('onboard');el.style.display=v?'flex':'none';
+  if(v){onboardStep=0;document.querySelectorAll('.onboard-step').forEach(s=>s.classList.remove('active'));document.getElementById('onboard-s0').classList.add('active');updateOnboardDots();}
+}
+
+// ── SERVICE WORKER ────────────────────────────────────────────
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+// ── BOOT ─────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
